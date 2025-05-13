@@ -7,6 +7,7 @@ public class KeyboardInputController : MonoBehaviour
     public PlayerControls controls;
 
     private CarController car;
+    private VehicleSpecs specs;
 
     private void Awake()
     {
@@ -26,6 +27,7 @@ public class KeyboardInputController : MonoBehaviour
     private void Start()
     {
         car = GetComponent<CarController>();
+        specs = GetComponent<VehicleSpecs>();
     }
 
     private void Update()
@@ -37,7 +39,7 @@ public class KeyboardInputController : MonoBehaviour
         car.throttlePos = Mathf.Clamp01(throttleInput);
         car.brakePos = Mathf.Clamp01(brakeInput);
 
-        float deltaAngle = steeringInput * car.steeringSpeed * Time.deltaTime;
+        float deltaAngle = steeringInput * specs.steeringSpeed * Time.deltaTime;
 
         if (Mathf.Abs(steeringInput) > 0.01f)
         {
@@ -50,14 +52,14 @@ public class KeyboardInputController : MonoBehaviour
             car.steeringAngle = Mathf.MoveTowards(
                 car.steeringAngle,
                 0f,
-                car.steeringSpeed * Time.deltaTime
+                specs.steeringSpeed * Time.deltaTime
             );
         }
 
         car.steeringAngle = Mathf.Clamp(
             car.steeringAngle,
-            -car.maxSteeringAngle,
-            car.maxSteeringAngle
+            -specs.maxSteeringAngle,
+            specs.maxSteeringAngle
         );
     }
 }

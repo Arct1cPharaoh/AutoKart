@@ -19,35 +19,37 @@ public class SteeringRigController : MonoBehaviour
     public float steeringWheelMultiplier = 1.0f; // How much to spin the steering wheel visually
 
     private CarController car;
+    private VehicleSpecs specs;
     private Rigidbody rb;
 
     private void Start()
     {
         car = GetComponent<CarController>();
+        specs = GetComponent<VehicleSpecs>();
         rb = GetComponent<Rigidbody>();
     }
 
-    void UpdateRearWheelRotation()
-    {
-        float speed = rb.linearVelocity.magnitude; // m/s
-        float wheelCircumference = 2 * Mathf.PI * car.wheelRadius;
-        float rpm = (speed / wheelCircumference) * 60f;
-        float degreesPerFrame = (rpm / 60f) * 360f * Time.deltaTime;
+    // void UpdateRearWheelRotation()
+    // {
+    //     float speed = rb.linearVelocity.magnitude; // m/s
+    //     float wheelCircumference = 2 * Mathf.PI * car.wheelRadius;
+    //     float rpm = (speed / wheelCircumference) * 60f;
+    //     float degreesPerFrame = (rpm / 60f) * 360f * Time.deltaTime;
 
-        if (rearLeftWheel != null)
-            rearLeftWheel.Rotate(Vector3.right, degreesPerFrame, Space.Self);
+    //     if (rearLeftWheel != null)
+    //         rearLeftWheel.Rotate(Vector3.right, degreesPerFrame, Space.Self);
 
-        if (rearRightWheel != null)
-            rearRightWheel.Rotate(Vector3.right, degreesPerFrame, Space.Self);
+    //     if (rearRightWheel != null)
+    //         rearRightWheel.Rotate(Vector3.right, degreesPerFrame, Space.Self);
 
-        if (driveShaft != null)
-            driveShaft.Rotate(Vector3.right, degreesPerFrame, Space.Self);
-    }
+    //     if (driveShaft != null)
+    //         driveShaft.Rotate(Vector3.right, degreesPerFrame, Space.Self);
+    // }
 
     void UpdateFrontWheelRotation()
     {
         float speed = rb.linearVelocity.magnitude; // m/s
-        float wheelCircumference = 2 * Mathf.PI * car.wheelRadius;
+        float wheelCircumference = 2 * Mathf.PI * specs.tireRadius;
         float rpm = (speed / wheelCircumference) * 60f;
         float degreesPerFrame = (rpm / 60f) * 360f * Time.deltaTime;
 
@@ -62,8 +64,8 @@ public class SteeringRigController : MonoBehaviour
     {
         float angle = Mathf.Clamp(
             car.steeringAngle,
-            -car.maxSteeringAngle,
-            car.maxSteeringAngle
+            -specs.maxSteeringAngle,
+            specs.maxSteeringAngle
         );
 
         if (frontLeftWheel != null)
@@ -80,8 +82,8 @@ public class SteeringRigController : MonoBehaviour
 
     void Update()
     {
-        UpdateRearWheelRotation();
+        // UpdateRearWheelRotation();
         UpdateSteeringVisuals();
-        UpdateFrontWheelRotation();
+        // UpdateFrontWheelRotation();
     }
 }

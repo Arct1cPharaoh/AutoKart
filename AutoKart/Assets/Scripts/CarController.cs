@@ -6,29 +6,39 @@ public class CarController : MonoBehaviour
     [Range(-30.0f, 30.0f)] public float steeringAngle = 0.0f; // Deg
     [Range(0.0f, 1.0f)] public float brakePos = 0.0f;
 
-    // Throttle
-    public float wheelRadius = 0.15f; // meters
-    public float motorMaxTorque = 5f; // Nm
-    public float motorMaxRPM = 3000f; // rpm
-    public float gearRatio = 2.75f; // 1:1
-    public float vehicleMass = 200f; // kg
-
-    // Steering
     private float curAngle = 0.0f;
-    public float maxSteeringAngle = 30f; // degrees
-    public float steeringSpeed = 90f; // degrees per second
-
-    // Brakes
-    public float maxBrakeForce = 1000f;
-
+    private Vector3 lastVelocity;
 
     private Rigidbody rb;
+    private VehicleSpecs specs;
+    private ChassisDynamics chassis;
+    private SteeringRigController steering;
+
+    private WheelPhysics wheelFLPhy;
+    private WheelPhysics wheelFRPhy;
+    private WheelPhysics wheelRLPhy;
+    private WheelPhysics wheelRRPhy;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        steering = GetComponent<SteeringRigController>();
         curAngle = transform.eulerAngles.y;
+
+        specs = GetComponent<VehicleSpecs>();
+        if (specs == null)
+        {
+            Debug.LogError("VehicleSpecs not found on this GameObject");
+            return;
+        }
+
+        rb.mass = specs.TotalMass;
+        chassis = new ChassisDynamics(specs);
+        wheelFLPhy = new WheelPhysics(steering.frontLeftWheel, rb, specs);
+        wheelFRPhy = new WheelPhysics(steering.frontRightWheel, rb, specs);
+        wheelRLPhy = new WheelPhysics(steering.rearLeftWheel, rb, specs);
+        wheelRRPhy = new WheelPhysics(steering.rearRightWheel, rb, specs);
     }
 
     bool ShouldOverrideMotion()
@@ -43,52 +53,88 @@ public class CarController : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
     }
 
+    // Estimate current acceleration from last velocity change
+    float EstimateAcceleration()
+    {
+        float accel = (rb.linearVelocity - lastVelocity).magnitude / Time.fixedDeltaTime;
+        lastVelocity = rb.linearVelocity;
+        return accel;
+    }
+
+    void ApplyNormalForcesToTwoWheels(float load, WheelPhysics w1, WheelPhysics w2)
+    {
+        // Divide load equally
+        float splitLoad = load * 0.5f;
+        w1.SetNormalForce(splitLoad);
+        w2.SetNormalForce(splitLoad);
+    }
+
+    float ComputeAvalibleTorque()
+    {
+        float wheelCircumference = 2 * Mathf.PI * specs.tireRadius;
+        float curRPM = (rb.linearVelocity.magnitude / wheelCircumference) * 60f;
+        float clampedRPM = Mathf.Clamp01(1.0f - (curRPM / specs.motorMaxRPM));
+        float torqueAvailable = specs.motorMaxTorque * clampedRPM;
+        float torque = throttlePos * torqueAvailable;
+        return torque;
+    }
+
+    Vector3 ComputeForceOnCar(float torque)
+    {
+        Vector3 deltaVelL = wheelRLPhy.ComputeTractionVelocity(torque);
+        Vector3 deltaVelR = wheelRRPhy.ComputeTractionVelocity(torque);
+        Vector3 netDeltaVelocity = (deltaVelL + deltaVelR) * 0.5f;
+        return netDeltaVelocity;
+    }
+
     void ApplyThrottleForce()
     {
-        // Simple linear fall off
-        float wheelCircumference = 2 * Mathf.PI * wheelRadius;
-        float curRPM = (rb.linearVelocity.magnitude / wheelCircumference) * 60f;
-        float clampedRPM = Mathf.Clamp01(1.0f - (curRPM / motorMaxRPM));
-        float torqueAvailable = motorMaxTorque * clampedRPM;
-        float torque = throttlePos * torqueAvailable;
+        float accel = EstimateAcceleration();
+        var (frontLoad, rearLoad) = chassis.ComputeLongitudinalLoadTransfer(accel);
+        ApplyNormalForcesToTwoWheels(rearLoad, wheelRLPhy, wheelRRPhy);
+        float torque = ComputeAvalibleTorque();
+        Vector3 netForce = ComputeForceOnCar(torque);
 
-        // Apply force to car
-        float driveForce = torque / wheelRadius;
-        rb.AddForce(transform.forward * driveForce);
+        // Apply the force
+        rb.AddForce(netForce, ForceMode.Force);
+        wheelRLPhy.ApplyLateralGripForce();
+        wheelRRPhy.ApplyLateralGripForce();
     }
 
     void ApplySteering()
     {
-        // Clamp steering
-        steeringAngle = Mathf.Clamp(
-            steeringAngle, -maxSteeringAngle, maxSteeringAngle
-        );
-
-        // Compute rotation delta for this frame
-        float step = steeringSpeed * Time.deltaTime;
-        // limit how fast it turns
-        float delta = Mathf.Clamp(steeringAngle, -step, step);
-        curAngle += delta;
-
-        // Apply rotation
-        transform.rotation = Quaternion.Euler(0f, curAngle, 0f);
+        float accel = EstimateAcceleration();
+        var (frontLoad, rearLoad) = chassis.ComputeLongitudinalLoadTransfer(accel);
+        ApplyNormalForcesToTwoWheels(frontLoad, wheelFLPhy, wheelFRPhy);
+        wheelFLPhy.ApplyLateralGripForce();
+        wheelFRPhy.ApplyLateralGripForce();
     }
 
     void ApplyBraking()
     {
-        // Apply braking
-        if (rb.linearVelocity.magnitude > 0.01) {
-            Vector3 brakeForce =
-                -rb.linearVelocity.normalized * brakePos * maxBrakeForce;
-            rb.AddForce(brakeForce);
-        }
-        else
-        {
-            ApplyFullStop();
-        }
+        if (brakePos <= 0.01f)
+            return;
+
+        // Split force by bias
+        float totalBrakeForce = brakePos * specs.maxBrakeForce;
+        float frontBias = specs.brakeBias / 100f;
+        float rearBias = 1f - frontBias;
+
+        float brakeFront = totalBrakeForce * 0.5f * frontBias; // per wheel
+        float brakeRear = totalBrakeForce * 0.5f * rearBias;   // per wheel
+
+        // Apply to each wheel
+        if (wheelFLPhy != null)
+            wheelFLPhy.ApplyBrakeForce(brakeFront);
+        if (wheelFRPhy != null)
+            wheelFRPhy.ApplyBrakeForce(brakeFront);
+        if (wheelRLPhy != null)
+            wheelRLPhy.ApplyBrakeForce(brakeRear);
+        if (wheelRRPhy != null)
+            wheelRRPhy.ApplyBrakeForce(brakeRear);
     }
 
-    // FixedUpdate is called once per phisics frame
+    // FixedUpdate is called once per phyisics frame
     void FixedUpdate()
     {
         if (ShouldOverrideMotion())
