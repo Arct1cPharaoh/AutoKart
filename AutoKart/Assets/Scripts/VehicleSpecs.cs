@@ -25,7 +25,7 @@ public class VehicleSpecs : MonoBehaviour
     public float rearTrackWidth = 1.2f;
 
     [Tooltip("Radius of tire from center to road contact patch.")]
-    public float tireRadius = 0.2032f;
+    public float tireRadius = 0.09597f;
 
     [Header("Motor")]
     [Tooltip("Maximum torque produced by the motor")]

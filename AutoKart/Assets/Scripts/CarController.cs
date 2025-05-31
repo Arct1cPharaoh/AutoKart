@@ -97,8 +97,6 @@ public class CarController : MonoBehaviour
 
         // Apply the force
         rb.AddForce(netForce, ForceMode.Force);
-        wheelRLPhy.ApplyLateralGripForce();
-        wheelRRPhy.ApplyLateralGripForce();
     }
 
     void ApplySteering()
@@ -106,8 +104,6 @@ public class CarController : MonoBehaviour
         float accel = EstimateAcceleration();
         var (frontLoad, rearLoad) = chassis.ComputeLongitudinalLoadTransfer(accel);
         ApplyNormalForcesToTwoWheels(frontLoad, wheelFLPhy, wheelFRPhy);
-        wheelFLPhy.ApplyLateralGripForce();
-        wheelFRPhy.ApplyLateralGripForce();
     }
 
     void ApplyBraking()
@@ -146,5 +142,10 @@ public class CarController : MonoBehaviour
         ApplyThrottleForce();
         ApplySteering();
         ApplyBraking();
+
+        wheelRLPhy.ApplyLateralGripForce();
+        wheelRRPhy.ApplyLateralGripForce();
+        wheelFLPhy.ApplyLateralGripForce();
+        wheelFRPhy.ApplyLateralGripForce();
     }
 }

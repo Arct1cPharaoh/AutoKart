@@ -148,17 +148,30 @@ public class WheelPhysics
             return;
 
         // Lateral direction relative to ground
-        Vector3 lateralDir = wheelTransform.right;
-        Vector3 groundNormal = contactNormal;
-        lateralDir = Vector3.ProjectOnPlane(lateralDir, groundNormal).normalized;
+        Vector3 lateralDir = Vector3.ProjectOnPlane(
+            wheelTransform.right, contactNormal
+        ).normalized;
+        Vector3 forwardDir = Vector3.ProjectOnPlane(
+            rb.linearVelocity, contactNormal
+        ).normalized;
 
         // Velocity at contact point
         Vector3 contactVelocity = rb.GetPointVelocity(contactPoint);
         float lateralSpeed = Vector3.Dot(contactVelocity, lateralDir);
 
         // Compute slip angle
-        float forwardSpeed = Mathf.Max(Vector3.Dot(rb.linearVelocity, wheelTransform.forward), 0.1f);
-        float slipAngle = Mathf.Atan2(lateralSpeed, forwardSpeed); // radians
+        float forwardSpeed = Vector3.Dot(contactVelocity, forwardDir);
+        float slipAngle;
+        if (Mathf.Abs(forwardSpeed) < 0.1f)
+        {
+            slipAngle = 0f;
+        }
+        else
+        {
+            slipAngle = Mathf.Atan2(lateralSpeed, forwardSpeed);
+        }
+
+        // Debug.Log("slipAngle" + slipAngle);
 
         // Tire model
         float grip = specs.coefficientOfFriction * (1f - specs.loadSensitivity * normalForce);
@@ -166,17 +179,19 @@ public class WheelPhysics
 
         // Apply lateral force
         Vector3 force = lateralDir * lateralForceMag;
-        rb.AddForceAtPosition(force, contactPoint);
+        // Debug.Log("force" + force);
 
         // Debugging
         Debug.DrawRay(contactPoint, force * 0.001f, Color.cyan);
         Debug.DrawRay(contactPoint, lateralDir * 0.25f, Color.magenta);
 
-        // Optional: visualize yaw torque line from CG
+        // visualize yaw torque line from CG
         Vector3 cg = rb.worldCenterOfMass;
         Vector3 leverArm = contactPoint - cg;
         Vector3 torqueVec = Vector3.Cross(leverArm, force);
         Debug.DrawRay(cg, torqueVec.normalized * 0.2f, Color.yellow);
+
+        rb.AddForceAtPosition(force, contactPoint);
     }
 
     public void ApplyBrakeForce(float forceMagnitude)
@@ -195,7 +210,7 @@ public class WheelPhysics
         Vector3 contactVelocity = rb.GetPointVelocity(contactPoint);
         float rollingSpeed = Vector3.Dot(contactVelocity, forwardDir);
 
-        if (Mathf.Abs(rollingSpeed) < 0.05f)
+        if (Mathf.Abs(rollingSpeed) < 0.5f)
             return; // avoid jitter when stopped
 
         // Clamp to direction of motion
