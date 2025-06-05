@@ -22,6 +22,8 @@ public class ConeDetector : MonoBehaviour
     [SerializeField] private int minPoints = 10;
     [SerializeField] private int minSize = 5;
 
+    [SerializeField] ConeMapper coneMapper;
+
     public struct DetectedCone
     {
         public Rect boundingBox;
@@ -133,16 +135,16 @@ public class ConeDetector : MonoBehaviour
 
     List<DetectedCone> ProcessRawContours(Texture2D img, ContourDetector detector)
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        // Stopwatch stopwatch = Stopwatch.StartNew();
 
         var rawContours = detector.DetectContoursFromRaw(img);
-        stopwatch.Stop();
+        // stopwatch.Stop();
         // UnityEngine.Debug.Log($"raw grayscale contour detection took {stopwatch.ElapsedMilliseconds} ms");
 
-        stopwatch = Stopwatch.StartNew();
+        // stopwatch = Stopwatch.StartNew();
         var merged = ContourDetector.MergeContours(rawContours, contourMergePad);
         var filtered = FilterContainedContours(merged);
-        stopwatch.Stop();
+        // stopwatch.Stop();
         // UnityEngine.Debug.Log($"merging + filtering took {stopwatch.ElapsedMilliseconds} ms");
 
         return CreateDetectedCones(filtered, "raw", minPoints, minSize);
@@ -185,23 +187,73 @@ public class ConeDetector : MonoBehaviour
         return grayTex;
     }
 
+// ----------------------------------------------------------------------------
+// Estimating cones
+// ----------------------------------------------------------------------------
+
+    float EstimateConeDist(float pixelHeight, float imgHeight,
+            float realConeHeightM, float vertFOV)
+    {
+        float fovRad = 0.5f * vertFOV * Mathf.Deg2Rad;
+        float focalLengthPixels = imgHeight / (2 * Mathf.Tan(fovRad));
+        return (focalLengthPixels * realConeHeightM) / pixelHeight;
+    }
+
+    float EstimateConeBearing(float xCenter, float imgWidth, float horiFOV)
+    {
+        float normX = (xCenter - imgWidth / 2f) / (imgWidth / 2f);
+        return normX * (horiFOV / 2f) * Mathf.Deg2Rad; // radians
+    }
+
+    Vector3 EstimateConePos(Rect bbox, Transform camTransform, Texture2D img)
+    {
+        float imgWidth = img.width;
+        float imgHeight = img.height;
+        float horiFOV = 61.38998f;
+        float vertFOV = 48f;
+        float realConeHeightM = 0.45f;
+
+        float distance = EstimateConeDist(
+            bbox.height, imgHeight, realConeHeightM, vertFOV
+        );
+        float bearing = EstimateConeBearing(bbox.center.x, imgWidth, horiFOV);
+
+        // Dir in cam space
+        Vector3 dir = new Vector3(Mathf.Sin(bearing), 0, Mathf.Cos(bearing));
+
+        // Move that dir from cam position
+        Vector3 localOffset = dir * distance;
+        Vector3 worldPos = camTransform.position + camTransform.rotation * localOffset;
+
+        return worldPos;
+    }
+
+// ----------------------------------------------------------------------------
+// End Estimating cones
+// ----------------------------------------------------------------------------
+
+    // Temp
+    public Camera cam;
+
     void DetectCones(Texture2D img)
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
         Texture2D grayTex = ToGrayScale(img);
-        // UnityEngine.Debug.Log($"Gray scale finished at{stopwatch.ElapsedMilliseconds} ms");
 
         var detector = new ContourDetector();
         var detectedCones = ProcessRawContours(grayTex, detector);
-        // UnityEngine.Debug.Log($"contours finished at{stopwatch.ElapsedMilliseconds} ms");
 
         // Draw raw cones
         foreach (var cone in detectedCones)
+        {
             Draw.Box(img, cone.boundingBox, Color.green);
-        // UnityEngine.Debug.Log($"boxes finished at{stopwatch.ElapsedMilliseconds} ms");
 
-        SaveFrameImage(img);
-        stopwatch.Stop();
-        // UnityEngine.Debug.Log($"Tatoal cone detector {stopwatch.ElapsedMilliseconds} ms");
+            Vector3 worldPos = EstimateConePos(
+                cone.boundingBox, cam.transform, img
+            );
+
+           coneMapper.RegisterConeEstimate(worldPos);
+        }
+
+        // SaveFrameImage(img);
     }
 }

@@ -13,9 +13,10 @@ public class Speedometer : MonoBehaviour
     [Tooltip("Max time allowed without a pulse before assuming zero speed")]
     public float pulseTimeout = 0.3f;
 
+    public float currentSpeedMPH = 0f;
+
     private Queue<float> pulseTimestamps = new Queue<float>();
     private float lastPulseTime = -999f;
-    private float currentSpeedMPH = 0f;
 
     private void Start()
     {
