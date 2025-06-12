@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 public class Speedometer : MonoBehaviour
 {
-    public WheelSpeedSensor sensor;
     public TextMeshProUGUI uiText;
 
     [Tooltip("Time window to average pulse count over (seconds)")]
@@ -15,15 +14,22 @@ public class Speedometer : MonoBehaviour
 
     public float currentSpeedMPH = 0f;
 
+    private WheelSpeed sensor;
     private Queue<float> pulseTimestamps = new Queue<float>();
     private float lastPulseTime = -999f;
 
     private void Start()
     {
+        sensor = transform.root.GetComponentInChildren<WheelSpeed>();
         if (sensor != null)
         {
             sensor.OnRisingEdge += HandlePulse;
         }
+    }
+
+    public float GetSpeedMPH()
+    {
+        return currentSpeedMPH;
     }
 
     private void HandlePulse()

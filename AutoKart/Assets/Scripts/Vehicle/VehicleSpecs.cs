@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class VehicleSpecs : MonoBehaviour
 {
     [Header("Mass Properties (kg)")]
@@ -14,9 +15,8 @@ public class VehicleSpecs : MonoBehaviour
     [Tooltip("Height of the center of gravity above the ground.")]
     public float cgHeight = 0.254f;
 
-    [Range(0f, 1f)]
-    [Tooltip("Fraction of weight on the front axle at rest.")]
-    public float frontWeightDistribution = 0.5f;
+    [Tooltip("0 = 100% rear, 1 = 100% front.")]
+    [Range(0f, 1f)] public float frontWeightDistribution = 0.5f;
 
     [Tooltip("Distance between the front-left and front-right wheels.")]
     public float frontTrackWidth = 1.2f;
@@ -60,19 +60,52 @@ public class VehicleSpecs : MonoBehaviour
     public float RearAxlePosition => wheelbase * (1f - frontWeightDistribution);
     public float FrontAxlePosition => wheelbase * frontWeightDistribution;
 
-    private SteeringRigController steering;
+    private SteeringRig steering;
 
-    void Start()
+    private void TryInitializeFromWheels()
     {
-        steering = GetComponent<SteeringRigController>();
-        if (!autoDeriveGeometry) return;
+        if (steering == null)
+        {
+            Debug.LogWarning("SteeringRig not found. Cannot auto-initialize geometry.");
+            return;
+        }
+
         InitializeFromWheelTransforms(
             steering.frontLeftWheel,
             steering.frontRightWheel,
             steering.rearLeftWheel,
             steering.rearRightWheel
         );
+    }
 
+    void Start()
+    {
+        steering = GetComponentInChildren<SteeringRig>();
+
+        if (autoDeriveGeometry)
+            TryInitializeFromWheels();
+    }
+
+    private bool AllWheelsPresent(
+        Transform fl, Transform fr, Transform rl, Transform rr)
+    {
+        return fl && fr && rl && rr;
+    }
+
+    private void TryAutoDetectTireRadius(Transform wheel)
+    {
+        Renderer renderer = wheel.GetComponentInChildren<Renderer>();
+        if (renderer == null)
+        {
+            Debug.LogWarning("No renderer found to detect tire radius.");
+            return;
+        }
+
+        float height = renderer.bounds.size.y;
+        if (height > 0.01f)
+        {
+            tireRadius = height * 0.5f;
+        }
     }
 
     public void InitializeFromWheelTransforms(
@@ -80,35 +113,19 @@ public class VehicleSpecs : MonoBehaviour
         Transform rearLeft, Transform rearRight
     )
     {
-        if (frontLeft == null || frontRight == null || rearLeft == null || rearRight == null)
+        if (!AllWheelsPresent(frontLeft, frontRight, rearLeft, rearRight))
         {
-            Debug.LogWarning("Wheel transforms missing. Skipping auto-geometry calculation.");
+            Debug.LogWarning("Missing wheel transforms.");
             return;
         }
 
-        // Track widths
         frontTrackWidth = Vector3.Distance(frontLeft.position, frontRight.position);
         rearTrackWidth = Vector3.Distance(rearLeft.position, rearRight.position);
 
-        // Wheelbase
         Vector3 frontMid = (frontLeft.position + frontRight.position) * 0.5f;
         Vector3 rearMid = (rearLeft.position + rearRight.position) * 0.5f;
         wheelbase = Vector3.Distance(frontMid, rearMid);
 
-        // Auto-detect tire radius from frontLeft
-        Renderer renderer = frontLeft.GetComponentInChildren<Renderer>();
-        if (renderer != null)
-        {
-            float height = renderer.bounds.size.y;
-            if (height > 0.01f)
-            {
-                tireRadius = height * 0.5f;
-                // Debug.Log($"Auto-detected tire radius: {tireRadius}");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("No Renderer found on frontLeft or its children for radius auto-detection.");
-        }
+        TryAutoDetectTireRadius(frontLeft);
     }
 }

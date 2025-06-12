@@ -12,7 +12,7 @@ public class CarController : MonoBehaviour
     private Rigidbody rb;
     private VehicleSpecs specs;
     private ChassisDynamics chassis;
-    private SteeringRigController steering;
+    private SteeringRig steering;
 
     private WheelPhysics wheelFLPhy;
     private WheelPhysics wheelFRPhy;
@@ -23,15 +23,9 @@ public class CarController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        steering = GetComponent<SteeringRigController>();
-        curAngle = transform.eulerAngles.y;
-
         specs = GetComponent<VehicleSpecs>();
-        if (specs == null)
-        {
-            Debug.LogError("VehicleSpecs not found on this GameObject");
-            return;
-        }
+        steering = GetComponentInChildren<SteeringRig>();
+        curAngle = transform.eulerAngles.y;
 
         rb.mass = specs.TotalMass;
         chassis = new ChassisDynamics(specs);

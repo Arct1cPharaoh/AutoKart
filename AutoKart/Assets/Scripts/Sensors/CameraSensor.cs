@@ -24,6 +24,9 @@ public class CameraSensor : MonoBehaviour
         cam.targetTexture = tex;
     }
 
+    public int GetCameraWidth() => width;
+    public int GetCameraHeight() => height;
+
     public Texture2D CaptureFrame() {
         RenderTexture curRT = RenderTexture.active;
         RenderTexture.active = tex;

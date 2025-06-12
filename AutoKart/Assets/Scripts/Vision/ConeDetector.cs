@@ -1,12 +1,88 @@
 using UnityEngine;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using System.Threading.Tasks;
-using Stopwatch = System.Diagnostics.Stopwatch;
+
+public struct DetectedCone
+{
+    public Rect boundingBox;
+    public string color;
+}
+
+public class ConeDetector : MonoBehaviour
+{
+    [Header("Capture Settings")]
+    [SerializeField] private CameraSensor cameraSensor;
+    [SerializeField] private float frameRate = 30f;
+    [SerializeField] private string imageSaveFolder = "CapturedFrames";
+    [SerializeField] private bool captureOnStart = false;
+    [SerializeField] private bool saveFrames = false;
+
+    [Header("Filter Settings")]
+    [SerializeField] private int contourMergePad = 20;
+    [SerializeField] private int minPoints = 10;
+    [SerializeField] private int minSize = 5;
+
+    private float frameTimer = 0f;
+    private int frameCounter = 0;
+
+    private ContourDetector contourDetector;
+    private ConeFilter coneFilter;
+
+    void Awake()
+    {
+        contourDetector = new ContourDetector();
+        coneFilter = new ConeFilter(minPoints, minSize, contourMergePad);
+    }
+
+    void Start()
+    {
+        if (captureOnStart)
+        {
+            Texture2D initialFrame = cameraSensor.CaptureFrame();
+            DetectCones(initialFrame);
+        }
+    }
+
+    public int GetCameraWidth() => cameraSensor.GetCameraWidth();
+    public int GetCameraHeight() => cameraSensor.GetCameraHeight();
+
+    private List<DetectedCone> DetectCones(Texture2D img)
+    {
+        Texture2D gray = Image.ToGrayScale(img);
+
+        List<Contour> rawContours = contourDetector.DetectContoursFromRaw(gray);
+        List<DetectedCone> detected = coneFilter.FilterContours(rawContours, "raw");
 
 
+        if (!saveFrames)
+        {
+            return detected;
+        }
+
+        // Draw raw cone bboxes
+        foreach (var cone in detected)
+            Draw.Box(img, cone.boundingBox, Color.green);
+
+        Image.SaveAsync(img, imageSaveFolder, frameCounter);
+        frameCounter++;
+
+        return detected;
+    }
+
+    public List<DetectedCone> TryDetectFrame(float deltaTime)
+    {
+        frameTimer += deltaTime;
+
+        if (captureOnStart || frameTimer < 1f / frameRate)
+            return null;
+
+        frameTimer = 0f;
+
+        Texture2D frame = cameraSensor.CaptureFrame();
+        return DetectCones(frame);
+    }
+}
+
+/*
 public class ConeDetector : MonoBehaviour
 {
     [SerializeField] private CameraSensor cameraSensor;
@@ -23,6 +99,7 @@ public class ConeDetector : MonoBehaviour
     [SerializeField] private int minSize = 5;
 
     [SerializeField] ConeMapper coneMapper;
+    SelfDriving core;
 
     public struct DetectedCone
     {
@@ -37,6 +114,8 @@ public class ConeDetector : MonoBehaviour
             Texture2D img = cameraSensor.CaptureFrame();
             DetectCones(img);
         }
+
+        core = GetComponentInParent<SelfDriving>();
     }
 
     void Update()
@@ -187,51 +266,6 @@ public class ConeDetector : MonoBehaviour
         return grayTex;
     }
 
-// ----------------------------------------------------------------------------
-// Estimating cones
-// ----------------------------------------------------------------------------
-
-    float EstimateConeDist(float pixelHeight, float imgHeight,
-            float realConeHeightM, float vertFOV)
-    {
-        float fovRad = 0.5f * vertFOV * Mathf.Deg2Rad;
-        float focalLengthPixels = imgHeight / (2 * Mathf.Tan(fovRad));
-        return (focalLengthPixels * realConeHeightM) / pixelHeight;
-    }
-
-    float EstimateConeBearing(float xCenter, float imgWidth, float horiFOV)
-    {
-        float normX = (xCenter - imgWidth / 2f) / (imgWidth / 2f);
-        return normX * (horiFOV / 2f) * Mathf.Deg2Rad; // radians
-    }
-
-    Vector3 EstimateConePos(Rect bbox, Transform camTransform, Texture2D img)
-    {
-        float imgWidth = img.width;
-        float imgHeight = img.height;
-        float horiFOV = 61.38998f;
-        float vertFOV = 48f;
-        float realConeHeightM = 0.45f;
-
-        float distance = EstimateConeDist(
-            bbox.height, imgHeight, realConeHeightM, vertFOV
-        );
-        float bearing = EstimateConeBearing(bbox.center.x, imgWidth, horiFOV);
-
-        // Dir in cam space
-        Vector3 dir = new Vector3(Mathf.Sin(bearing), 0, Mathf.Cos(bearing));
-
-        // Move that dir from cam position
-        Vector3 localOffset = dir * distance;
-        Vector3 worldPos = camTransform.position + camTransform.rotation * localOffset;
-
-        return worldPos;
-    }
-
-// ----------------------------------------------------------------------------
-// End Estimating cones
-// ----------------------------------------------------------------------------
-
     // Temp
     public Camera cam;
 
@@ -251,9 +285,11 @@ public class ConeDetector : MonoBehaviour
                 cone.boundingBox, cam.transform, img
             );
 
-           coneMapper.RegisterConeEstimate(worldPos);
+           Vector3 carPos = core.GetEstimatedPosition();
+           coneMapper.RegisterConeEstimate(worldPos, carPos);
         }
 
         // SaveFrameImage(img);
     }
 }
+*/

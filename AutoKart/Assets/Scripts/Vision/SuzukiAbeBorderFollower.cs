@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 public static class SuzukiAbeBorderFollower
 {
-    public static List<Contour> TraceContours(bool[] binaryImg, int width,
-        int height)
+    public static List<Contour>
+    TraceContours(bool[] binaryImg, int width, int height)
     {
         List<Contour> contours = new();
         bool[] visited = new bool[binaryImg.Length];

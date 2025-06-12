@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class WheelSpeedSensor : MonoBehaviour
+public class WheelSpeed : MonoBehaviour
 {
     [Tooltip("Simulated high voltage output (V)")]
     public float highVoltage = 5.0f;
@@ -50,7 +50,6 @@ public class WheelSpeedSensor : MonoBehaviour
     private void FixedUpdate()
     {
         Vector3 contactVelocity = rb.GetPointVelocity(transform.position);
-        // Debug.Log($"MPH (raw): {(rb.GetPointVelocity(transform.position).magnitude * 2.23694f):F2}");
 
         float wheelSpeed = contactVelocity.magnitude; // m/s
 

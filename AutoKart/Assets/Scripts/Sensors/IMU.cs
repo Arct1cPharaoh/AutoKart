@@ -12,9 +12,19 @@ public class IMU : MonoBehaviour
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        rb = GetComponentInParent<Rigidbody>();
         lastVelocity = rb.linearVelocity;
         lastRotation = transform.rotation;
+    }
+
+    public Vector3 GetLinearAcceleration()
+    {
+        return linearAccel;
+    }
+
+    public Vector3 GetAngularVelocity()
+    {
+        return angularVelocity;
     }
 
     void FixedUpdate()

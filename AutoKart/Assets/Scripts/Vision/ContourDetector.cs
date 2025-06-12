@@ -5,61 +5,19 @@ using System.IO;
 
 public class ContourDetector
 {
-    private CannyEdgeDetector.CannyParams cannyParams;
-
-    public ContourDetector(CannyEdgeDetector.CannyParams parameters = null)
-    {
-        this.cannyParams = parameters ?? new CannyEdgeDetector.CannyParams();
-    }
-
     public List<Contour> Detect(Texture2D img)
     {
-        int width, height;
+        int width = img.width;
+        int height = img.height;
 
         // Edge Detection
-        bool[] edgeMap = CannyEdgeDetector.Apply(img, out width, out height,
-            cannyParams);
+        bool[] edgeMap = CannyEdgeDetector.Apply(img);
 
         // Border Following to extract contours
-        List<Contour> contours = SuzukiAbeBorderFollower.TraceContours(
-            edgeMap, width, height);
+        List<Contour> contours =
+            SuzukiAbeBorderFollower.TraceContours(edgeMap, width, height);
 
         return contours;
-    }
-
-    Texture2D GrayscaleToRGB(Texture2D grayTex)
-    {
-        int width = grayTex.width;
-        int height = grayTex.height;
-        byte[] gray = grayTex.GetRawTextureData();
-
-        Color32[] rgbPixels = new Color32[gray.Length];
-        for (int i = 0; i < gray.Length; i++)
-        {
-            byte g = gray[i];
-            rgbPixels[i] = new Color32(g, g, g, 255);
-        }
-
-        Texture2D rgbTex = new Texture2D(width, height, TextureFormat.RGB24, false);
-        rgbTex.SetPixels32(rgbPixels);
-        rgbTex.Apply();
-        return rgbTex;
-    }
-
-    void SaveGrayDebugImage(Texture2D grayTex, string label = "debug_gray")
-    {
-        Texture2D rgbTex = GrayscaleToRGB(grayTex);
-        byte[] bytes = rgbTex.EncodeToJPG(75);
-
-        string folderPath = Path.Combine(Application.dataPath, "CapturedFrames");
-        if (!Directory.Exists(folderPath))
-            Directory.CreateDirectory(folderPath);
-
-        string filename = $"{label}.jpg";
-        string filePath = Path.Combine(folderPath, filename);
-
-        File.WriteAllBytes(filePath, bytes);
-        // Debug.Log($"Saved grayscale debug image: {filePath}");
     }
 
     public List<Contour> DetectContoursFromRaw(Texture2D input)

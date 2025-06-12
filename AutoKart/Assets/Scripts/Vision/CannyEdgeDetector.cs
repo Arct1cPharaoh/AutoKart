@@ -3,15 +3,13 @@ using System.Collections.Generic;
 
 public class CannyEdgeDetector
 {
-    public class CannyParams
-    {
-        public float lowThresh = 0.1f;
-        public float highThresh = 0.3f;
-        public bool applyGaussian = false;
-    }
+    // Canny Parameters
+    private static float lowThresh = 0.1f;
+    private static float highThresh = 0.3f;
+    private static bool applyGaussian = false;
 
-    private static void ApplyGaussianBlur(float[] buffer, int width, int height,
-        float sigma = 1.0f)
+    private static void
+    GaussianBlur(float[] buffer, int width, int height, float sigma = 1.0f)
     {
         int radius = Mathf.CeilToInt(3 * sigma);
         int size = radius * 2 + 1;
@@ -63,8 +61,8 @@ public class CannyEdgeDetector
         }
     }
 
-    private static void ApplySobel(float[] src, int width, int height,
-        float[] gradient, float[] dir)
+    private static void
+    Sobel(float[] src, int width, int height, float[] gradient, float[] dir)
     {
         int[] gx = {-1, 0, 1,
                     -2, 0, 2,
@@ -98,8 +96,8 @@ public class CannyEdgeDetector
         }
     }
 
-    private static float[] NonMaxSuppression(float[] grad, float[] dir,
-        int width, int height)
+    private static float[]
+    NonMaxSuppression(float[] grad, float[] dir, int width, int height)
     {
         float[] result = new float[grad.Length];
         for (int y = 1; y < height - 1; y++)
@@ -141,8 +139,8 @@ public class CannyEdgeDetector
         return result;
     }
 
-    private static bool[] Hysteresis(float[] nms, int width, int height,
-        float low, float high)
+    private static bool[]
+    Hysteresis(float[] nms, int width, int height, float low, float high)
     {
         bool[] result = new bool[nms.Length];
         Queue<int> queue = new Queue<int>();
@@ -176,15 +174,10 @@ public class CannyEdgeDetector
         return result;
     }
 
-    public static bool[] Apply(Texture2D img, out int width, out int height,
-        CannyParams parameters = null)
+    public static bool[] Apply(Texture2D img)
     {
-        // Use default parameters if none
-        if (parameters == null)
-            parameters = new CannyParams();
-
-        width = img.width;
-        height = img.height;
+        int width = img.width;
+        int height = img.height;
 
         Color32[] pixels = img.GetPixels32();
         float[] grayScale = new float[pixels.Length];
@@ -197,20 +190,19 @@ public class CannyEdgeDetector
         }
 
         // Gaussian blur
-        if (parameters.applyGaussian)
-            ApplyGaussianBlur(grayScale, width, height, sigma: 1.0f);
+        if (applyGaussian)
+            GaussianBlur(grayScale, width, height, sigma: 1.0f);
 
         // Sobel filter
         float[] gradient = new float[pixels.Length];
         float[] dir = new float[pixels.Length];
-        ApplySobel(grayScale, width, height, gradient, dir);
+        Sobel(grayScale, width, height, gradient, dir);
 
         // Non-Maximum Suppression
         float[] nms = NonMaxSuppression(gradient, dir, width, height);
 
         // Hysteresis Thresholding
-        bool[] edgeMap = Hysteresis(nms, width, height, parameters.lowThresh,
-            parameters.highThresh);
+        bool[] edgeMap = Hysteresis(nms, width, height, lowThresh, highThresh);
 
         return edgeMap;
     }

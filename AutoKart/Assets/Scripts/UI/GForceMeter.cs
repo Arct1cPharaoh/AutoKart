@@ -10,17 +10,17 @@ public class GForceMeter : MonoBehaviour
 
     void Start()
     {
-        imu = GetComponent<IMU>();
-    }
+        imu = transform.root.GetComponentInChildren<IMU>();
 
-    void Update()
-    {
         if (imu == null || dot == null)
         {
             Debug.LogError("Missing GForceMeter required componets");
             return;
         }
+    }
 
+    void Update()
+    {
         // Get hori accel in Gs
         float gravity = 9.81f;
         Vector2 gForce = new Vector2(imu.linearAccel.x, imu.linearAccel.z) / gravity;
