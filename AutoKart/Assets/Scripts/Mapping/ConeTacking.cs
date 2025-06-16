@@ -5,7 +5,6 @@ public class ConeTracking
 {
     class TrackedCone
     {
-        public Vector3 carPos;
         public Vector3 worldPos;
         public int updateCount = 1;
         public GameObject visual;
@@ -14,10 +13,9 @@ public class ConeTracking
     private readonly List<TrackedCone> trackedCones = new();
     private readonly ConeMapper coneMapper;
 
-    private const float POS_THRESHOLD = 1.0f;
+    private const float POS_THRESHOLD = 2.0f;
     private const int MIN_UPDATES_TO_CONFIRM = 2;
-
-    private Vector3 lastPoseCorrection = Vector3.zero;
+    private const float MAX_RANGE = 10f;
 
     public ConeTracking(ConeMapper mapper)
     {
@@ -35,17 +33,14 @@ public class ConeTracking
         return null;
     }
 
-    public void RegisterCone(Vector3 estWorldPos, Vector3 estCarPos)
+    public void RegisterCone(Vector3 estWorldPos)
     {
         TrackedCone match = FindMatchingCone(estWorldPos);
 
         // Create new cone
         if (match == null)
         {
-            TrackedCone cone = new TrackedCone{
-                worldPos = estWorldPos,
-                carPos = estCarPos
-            };
+            TrackedCone cone = new TrackedCone{worldPos = estWorldPos};
             trackedCones.Add(cone);
 
             if (cone.updateCount >= MIN_UPDATES_TO_CONFIRM)
@@ -57,35 +52,91 @@ public class ConeTracking
             match.visual = coneMapper.PlaceCone(estWorldPos);
 
         match.worldPos = Vector3.Lerp(match.worldPos, estWorldPos, 0.5f);
-        match.carPos = Vector3.Lerp(match.carPos, estCarPos, 0.99f);
         match.updateCount++;
 
         if (match.visual != null)
             coneMapper.UpdateConePosition(match.visual, match.worldPos);
     }
 
-    public Vector3 ComputePoseCorrection(Vector3 currentPose)
+    public Vector3 ComputePoseCorrection(Vector3 carPos, float carHeading)
     {
-        Vector3 totalOffset = Vector3.zero;
+        Vector2 totalError = Vector2.zero;
         int count = 0;
 
         foreach (TrackedCone cone in trackedCones)
         {
             if (cone.updateCount < MIN_UPDATES_TO_CONFIRM) continue;
 
-            Vector3 offset = currentPose - cone.carPos;
-            totalOffset += offset;
+            // Expected position of cone in world space if the car is correctly located
+            Vector2 forward = new Vector2(Mathf.Sin(carHeading), Mathf.Cos(carHeading));
+            Vector2 carPos2D = new Vector2(carPos.x, carPos.z);
+            Vector2 conePos2D = new Vector2(cone.worldPos.x, cone.worldPos.z);
+
+            Vector2 expectedRel = conePos2D - carPos2D;
+            float expectedDist = expectedRel.magnitude;
+
+            if (expectedDist > MAX_RANGE) continue;
+
+            // Add the difference between expected and actual cone position
+            Vector2 error = conePos2D - (carPos2D + expectedRel); // simplified form
+            totalError += error;
             count++;
         }
 
         if (count == 0)
+            return Vector3.zero;
+
+        Vector2 avgError = totalError / count;
+        Vector3 correction = new Vector3(avgError.x, 0f, avgError.y);
+
+        // Apply smoothing (low-pass filter)
+        Vector3 poseCorrection = Vector3.Lerp(Vector3.zero, correction, 0.02f);
+        return poseCorrection;
+    }
+
+    public float ComputeHeadingCorrection(Vector3 carPos, float carHeading)
+    {
+        float totalHeadingError = 0f;
+        int count = 0;
+
+        Vector2 carPos2D = new Vector2(carPos.x, carPos.z);
+        Vector2 forward = new Vector2(Mathf.Sin(carHeading), Mathf.Cos(carHeading));
+
+        foreach (TrackedCone cone in trackedCones)
         {
-            lastPoseCorrection = currentPose;
-            return lastPoseCorrection;
+            if (cone.updateCount < MIN_UPDATES_TO_CONFIRM) continue;
+
+            Vector2 conePos2D = new Vector2(cone.worldPos.x, cone.worldPos.z);
+            Vector2 toCone = conePos2D - carPos2D;
+
+            float dist = toCone.magnitude;
+            if (dist < 1f || dist > 20f) continue; // Filter unreliable cones
+
+            toCone.Normalize();
+
+            // Signed angle error between current forward and actual direction to cone
+            float angleError = Mathf.Atan2(
+                toCone.x * forward.y - toCone.y * forward.x,
+                toCone.x * forward.x + toCone.y * forward.y
+            );
+
+            totalHeadingError += angleError;
+            count++;
         }
 
-        Vector3 avgOffset = totalOffset / count;
-        lastPoseCorrection = Vector3.Lerp(currentPose, currentPose - avgOffset, 0.02f);
-        return lastPoseCorrection;
+        if (count == 0) return 0f;
+
+        float avgHeadingError = totalHeadingError / count;
+
+        // Clamp large jumps to prevent flipping
+        float maxHeadingCorrection = Mathf.Deg2Rad * 2f;
+        avgHeadingError = Mathf.Clamp(avgHeadingError, -maxHeadingCorrection, maxHeadingCorrection);
+
+        // Scale correction based on cone confidence
+        float trust = Mathf.Clamp01(count / 5f); // Full trust at 5+ cones
+        float trustedCorrection = avgHeadingError * trust;
+
+        // Smooth the correction (low-pass)
+        return Mathf.Lerp(0f, trustedCorrection, 0.1f);
     }
 }

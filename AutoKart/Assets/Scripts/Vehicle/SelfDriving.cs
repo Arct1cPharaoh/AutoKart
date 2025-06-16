@@ -18,6 +18,9 @@ public class SelfDriving : MonoBehaviour
     [SerializeField] private float verticalFOV = 48f;
     [SerializeField] private float coneHeightM = 0.45f;
 
+    [Header("Debug Options")]
+    [SerializeField] private bool debugOverridePose = false;
+
     void Start()
     {
         detector = GetComponentInChildren<ConeDetector>();
@@ -28,22 +31,18 @@ public class SelfDriving : MonoBehaviour
         imu = GetComponentInChildren<IMU>();
 
         poseEstimator = new PoseEstimator();
-        tracking = new ConeTracking(mapper);
-        projector = new ConeProjector(
-            width, height, cameraOffset, horizontalFOV, verticalFOV, coneHeightM
-        );
-    }
-
-
-    public Vector3 GetEstimatedPosition()
-    {
-        var pose = poseEstimator.GetPose();
-        return new Vector3(pose.position.x, 0f, pose.position.y);
     }
 
     public float GetHeadingRadians()
     {
         return poseEstimator.GetPose().heading;
+    }
+
+    public void OverrideEstimatedPoseWithTruePose()
+    {
+        Vector3 truePos = transform.position;
+        float trueHeading = transform.eulerAngles.y * Mathf.Deg2Rad;
+        poseEstimator.OverridePose(new Vector2(truePos.x, truePos.z), trueHeading);
     }
 
     void Update()
@@ -59,11 +58,17 @@ public class SelfDriving : MonoBehaviour
             foreach (DetectedCone cone in cones)
             {
                 Vector3 world = projector.Project(cone.boundingBox, carPos, carHeading);
-                tracking.RegisterCone(world, carPos);
+                tracking.RegisterCone(world);
+            }
+
+            if (debugOverridePose)
+            {
+                OverrideEstimatedPoseWithTruePose();
             }
         }
 
-        Vector3 offset = tracking.ComputePoseCorrection(carPos);
-        poseEstimator.Update(deltaTime, speed, imu, offset);
+        Vector3 offset = tracking.ComputePoseCorrection(carPos, carHeading);
+        // float headingCorrection = tracking.ComputeHeadingCorrection(carPos, carHeading);
+        poseEstimator.Update(deltaTime, speed, imu, offset, 0.0f);
     }
 }
