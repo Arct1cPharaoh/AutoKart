@@ -6,6 +6,7 @@ public class ConeTracking
     class TrackedCone
     {
         public Vector3 worldPos;
+        public Color color;
         public int updateCount = 1;
         public GameObject visual;
     }
@@ -14,44 +15,61 @@ public class ConeTracking
     private readonly ConeMapper coneMapper;
 
     private const float POS_THRESHOLD = 2.0f;
-    private const int MIN_UPDATES_TO_CONFIRM = 2;
-    private const float MAX_RANGE = 10f;
+    private const int MIN_UPDATES_TO_CONFIRM = 5;
+    private const float MAX_RANGE = 5f;
 
     public ConeTracking(ConeMapper mapper)
     {
         coneMapper = mapper;
     }
 
-    TrackedCone FindMatchingCone(Vector3 pos)
+    public List<Vector3> GetConesByColor(Color color)
+    {
+        List<Vector3> result = new();
+        // TODO: Make this automatic
+        foreach (var cone in trackedCones)
+        {
+            if (cone.updateCount >= MIN_UPDATES_TO_CONFIRM && cone.color == color)
+                result.Add(cone.worldPos);
+        }
+        return result;
+    }
+
+    TrackedCone FindMatchingCone(Vector3 pos, Color color)
     {
         // FIXME: This can be heavily optimized
         foreach (TrackedCone cone in trackedCones)
         {
-            if (Vector3.Distance(cone.worldPos, pos) < POS_THRESHOLD)
+            if (Vector3.Distance(cone.worldPos, pos) < POS_THRESHOLD &&
+               cone.color == color)
                 return cone;
         }
         return null;
     }
 
-    public void RegisterCone(Vector3 estWorldPos)
+    public void RegisterCone(Vector3 estWorldPos, Color color)
     {
-        TrackedCone match = FindMatchingCone(estWorldPos);
+        TrackedCone match = FindMatchingCone(estWorldPos, color);
 
         // Create new cone
         if (match == null)
         {
-            TrackedCone cone = new TrackedCone{worldPos = estWorldPos};
+            TrackedCone cone = new TrackedCone{
+                worldPos = estWorldPos,
+                color = color
+            };
             trackedCones.Add(cone);
 
             if (cone.updateCount >= MIN_UPDATES_TO_CONFIRM)
-                cone.visual = coneMapper.PlaceCone(estWorldPos);
+                cone.visual = coneMapper.PlaceCone(estWorldPos, color);
             return;
         }
 
         if (match.updateCount == MIN_UPDATES_TO_CONFIRM)
-            match.visual = coneMapper.PlaceCone(estWorldPos);
+            match.visual = coneMapper.PlaceCone(estWorldPos, color);
 
-        match.worldPos = Vector3.Lerp(match.worldPos, estWorldPos, 0.5f);
+        float alpha = 1f / (match.updateCount + 1f); // exponential decay
+        match.worldPos = Vector3.Lerp(match.worldPos, estWorldPos, alpha);
         match.updateCount++;
 
         if (match.visual != null)

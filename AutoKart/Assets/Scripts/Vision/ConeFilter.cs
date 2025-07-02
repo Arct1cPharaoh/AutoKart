@@ -88,7 +88,16 @@ public class ConeFilter
         return mergedContours;
     }
 
-    public List<DetectedCone> FilterContours(List<Contour> rawContours, string label)
+    private bool IsConeAspectRatio(RectInt box, float expectedAspect,
+            float tolerance)
+    {
+        if (box.height == 0) return false; // Prevent divide by zero
+        float aspect = (float)box.width / box.height;
+        return Mathf.Abs(aspect - expectedAspect) <= tolerance;
+    }
+
+    public List<DetectedCone> FilterContours(List<Contour> rawContours,
+        Texture2D img, Vector2 cropOffset)
     {
         List<Contour> merged = MergeContours(rawContours, mergePadding);
         List<Contour> filtered = RemoveNestedContours(merged);
@@ -104,10 +113,19 @@ public class ConeFilter
             if (box.width < minSize || box.height < minSize)
                 continue;
 
+            float aspect = 0.9f;
+            float tolerance = 0.3f;
+            if (!IsConeAspectRatio(box, aspect, tolerance))
+                continue;
+
+            Color? detectedColor = ConeColorMask.SampleConeColor(img, box, cropOffset);
+            if (detectedColor == null)
+                continue;
+
             DetectedCone cone = new DetectedCone
             {
                 boundingBox = new Rect(box.x, box.y, box.width, box.height),
-                color = label
+                color = detectedColor.Value
             };
 
             cones.Add(cone);

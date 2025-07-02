@@ -2,7 +2,8 @@ using UnityEngine;
 
 public class ConeMapper : MonoBehaviour
 {
-    [SerializeField] private GameObject conePrefab;
+    [SerializeField] private GameObject yellowConePrefab;
+    [SerializeField] private GameObject blueConePrefab;
     private Transform coneRoot;
 
     void Awake()
@@ -10,12 +11,14 @@ public class ConeMapper : MonoBehaviour
         coneRoot = transform.parent;
     }
 
-    public GameObject PlaceCone(Vector3 pos)
+    public GameObject PlaceCone(Vector3 pos, Color color)
     {
+        GameObject prefab = color == Color.blue ? blueConePrefab : yellowConePrefab;
+
         GameObject cone = Instantiate(
-            conePrefab,
+            prefab,
             new Vector3(pos.x, 0f, pos.z),
-            conePrefab.transform.rotation,
+            prefab.transform.rotation,
             coneRoot
         );
         cone.layer = LayerMask.NameToLayer("SLAMMap");

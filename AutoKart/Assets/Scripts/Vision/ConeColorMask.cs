@@ -1,110 +1,87 @@
 using UnityEngine;
+using System.Collections.Generic;
 using System.IO;
 
 public static class ConeColorMask
 {
-    public struct ConeMask
-    {
-        public bool[] yellowMask;
-        public bool[] blueMask;
-        public bool[] whiteMask;
-        public int width;
-        public int height;
-    }
-
     // Yellow Cones (Hue ~30°)
-    static bool isYellowHSV(float h, float s, float v)
+    static bool IsYellowHSV(float h, float s, float v)
     {
         return h > 0.10f && h < 0.18f && s > 0.4f && v > 0.4f;
     }
 
     // Blue Cones (Hue ~220-240°)
-    static bool isBlueHSV(float h, float s, float v)
+    static bool IsBlueHSV(float h, float s, float v)
     {
         return h > 0.55f && h < 0.72f && s > 0.3f && v > 0.3f;
     }
 
     // White stripes
-    static bool isWhiteHSV(float h, float s, float v)
+    static bool IsWhiteHSV(float h, float s, float v)
     {
         return (v > 0.85f && s < 0.2f) || (v > 0.7f && s < 0.25f);
     }
 
-    public static ConeMask ExtractConeMask(Texture2D img)
+    static Color? GetConeColor(float h, float s, float v)
     {
-        Color32[] pixels = img.GetPixels32();
-        int width = img.width;
-        int height = img.height;
-
-        bool[] yellowMask = new bool[pixels.Length];
-        bool[] blueMask = new bool[pixels.Length];
-        bool[] whiteMask = new bool[pixels.Length];
-
-        for (int i = 0; i < pixels.Length; i++)
-        {
-            Color32 rgb = pixels[i];
-            // Convert to better format for processing
-            Color.RGBToHSV(rgb, out float h, out float s, out float v);
-
-            if (isYellowHSV(h, s, v))
-                yellowMask[i] = true;
-            else if (isBlueHSV(h, s, v))
-                blueMask[i] = true;
-            // White Stripes for merging
-            else if (isWhiteHSV(h, s, v))
-                whiteMask[i] = true;
-
-            // Orange Cones TODO: Add later
-        }
-
-        return new ConeMask
-        {
-            yellowMask = yellowMask,
-            blueMask = blueMask,
-            whiteMask = whiteMask,
-            width = width,
-            height = height
-        };
+        if (IsYellowHSV(h, s, v)) return Color.yellow;
+        if (IsBlueHSV(h, s, v)) return Color.blue;
+        return null;
     }
 
-    public static Texture2D BoolMaskToTex(bool[] mask, int width, int height)
+    static Vector2Int SampleBoxPoint(RectInt box, Vector2 cropOffset)
     {
-        Texture2D tex = new Texture2D(width, height, TextureFormat.R8, false);
-        Color32[] pixels = new Color32[mask.Length];
+        float u = Random.value;
+        float v = Random.value;
 
-        for (int i = 0; i < mask.Length; i++)
-            pixels[i] = mask[i] ? Color.white : Color.black;
+        int px = Mathf.Clamp((int)(box.x + cropOffset.x + box.width * u), 0, int.MaxValue);
+        int py = Mathf.Clamp((int)(box.y + cropOffset.y + box.height * v), 0, int.MaxValue);
 
-        tex.SetPixels32(pixels);
-        tex.Apply();
-        return tex;
+        return new Vector2Int(px, py);
     }
 
-    public static void SaveMask(ConeMask mask)
+    public static Color? SampleConeColor(Texture2D image, RectInt box,
+            Vector2 cropOffset, int sampleCount = 50,
+            float minVoteFraction = 0.2f, bool debug = false)
     {
-        Texture2D tex = new Texture2D(mask.width, mask.height, TextureFormat.RGB24, false);
-        Color32[] pixels = new Color32[mask.width * mask.height];
+        Dictionary<Color, int> voteCounts = new();
+        Texture2D debugImg = new Texture2D(image.width, image.height, image.format, false);
+        debugImg.SetPixels32(image.GetPixels32());
 
-        for (int i = 0; i < pixels.Length; i++)
+        for (int i = 0; i < sampleCount; i++)
         {
-            bool y = mask.yellowMask[i];
-            bool b = mask.blueMask[i];
-            bool w = mask.whiteMask[i];
+            Vector2Int p = SampleBoxPoint(box, cropOffset);
+            Color32 pixel = image.GetPixel(p.x, p.y);
+            Color.RGBToHSV(pixel, out float h, out float s, out float v);
 
-            pixels[i] = new Color32(
-                (byte)(b ? 255 : 0),
-                (byte)(y ? 255 : 0),
-                (byte)(w ? 255 : 0),
-                255
-            );
+            Color? color = GetConeColor(h, s, v);
+            Color debugColor = Color.black;
+            if (color.HasValue)
+            {
+                if (!voteCounts.ContainsKey(color.Value))
+                    voteCounts[color.Value] = 0;
+                voteCounts[color.Value]++;
+                debugColor = color.Value;
+            }
+
         }
 
-        tex.SetPixels32(pixels);
-        tex.Apply();
+        if (debug)
+        {
+            debugImg.Apply();
+            Image.SaveAsync(debugImg, "CapturedFrames", -2);
 
-        byte[] bytes = tex.EncodeToPNG();
-        string path = Application.dataPath + "/DebugConeMask.png";
-        File.WriteAllBytes(path, bytes);
-        Debug.Log($"Saved cone mask debug image: {path}");
+            foreach (var kvp in voteCounts)
+                Debug.Log($"Color: {kvp.Key}, Votes: {kvp.Value}");
+        }
+
+        int minVotes = Mathf.CeilToInt(sampleCount * minVoteFraction);
+        foreach (var kvp in voteCounts)
+        {
+            if (kvp.Value >= minVotes)
+                return kvp.Key;
+        }
+
+        return null;
     }
 }

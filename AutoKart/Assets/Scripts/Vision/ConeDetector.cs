@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public struct DetectedCone
 {
     public Rect boundingBox;
-    public string color;
+    public Color color;
 }
 
 public class ConeDetector : MonoBehaviour
@@ -45,23 +45,62 @@ public class ConeDetector : MonoBehaviour
     public int GetCameraWidth() => cameraSensor.GetCameraWidth();
     public int GetCameraHeight() => cameraSensor.GetCameraHeight();
 
+
+    // ------------------------------------------------------------------------
+    // Masking
+    // ------------------------------------------------------------------------
+
+    List<Vector2> carMask = new List<Vector2>
+    {
+        new Vector2(0.2f, 0.25f),  // bottom left
+        new Vector2(0.26f, 0.34f), // mid left
+        new Vector2(0.37f, 0.37f),  // mid left
+        new Vector2(0.5f, 0.43f),  // center
+        new Vector2(0.63f, 0.37f),  // mid right
+        new Vector2(0.74f, 0.34f), // mid right
+        new Vector2(0.8f, 0.25f)   // bottom right
+    };
+
+    // ------------------------------------------------------------------------
+    // End Masking
+    // ------------------------------------------------------------------------
+
     private List<DetectedCone> DetectCones(Texture2D img)
     {
         Texture2D gray = Image.ToGrayScale(img);
+        // Image.ApplyPolygonMask(gray, carMask);
 
-        List<Contour> rawContours = contourDetector.DetectContoursFromRaw(gray);
-        List<DetectedCone> detected = coneFilter.FilterContours(rawContours, "raw");
+        // Crop out top (sky) and bottom (car)
+        Vector2 cropOffset;
+        Texture2D cropped = Image.Crop(
+            gray,
+            out cropOffset,
+            topPercent: 0.29f,
+            bottomPercent: 0.45f
+        );
 
+        Image.SaveAsync(cropped, "CapturedFrames", -1);
+
+        List<Contour> rawContours = contourDetector.Detect(cropped);
+        List<DetectedCone> detected = coneFilter.FilterContours(
+            rawContours, img, cropOffset
+        );
 
         if (!saveFrames)
         {
             return detected;
         }
 
-        // Draw raw cone bboxes
+        // Draw cone bboxes
         foreach (var cone in detected)
-            Draw.Box(img, cone.boundingBox, Color.green);
+        {
+            Rect box = cone.boundingBox;
+            Color col = cone.color;
+            box.position += cropOffset;
+            Draw.Box(img, box, col);
+        }
 
+        // Image.ApplyPolygonMask(img, carMask);
         Image.SaveAsync(img, imageSaveFolder, frameCounter);
         frameCounter++;
 

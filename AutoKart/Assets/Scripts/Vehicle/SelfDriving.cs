@@ -7,15 +7,17 @@ public class SelfDriving : MonoBehaviour
     ConeDetector detector;
     ConeProjector projector;
     ConeTracking tracking;
+    PathPlanner pathPlanner;
+    PathFollower follower;
     [SerializeField] ConeMapper mapper;
 
     Speedometer wheel;
     IMU imu;
 
     [Header("Camera Settings")]
-    [SerializeField] private Vector3 cameraOffset = new Vector3(0f, 0.3986f, 0.1971f);
-    [SerializeField] private float horizontalFOV = 61.38998f;
-    [SerializeField] private float verticalFOV = 48f;
+    [SerializeField] private Vector3 cameraOffset = new Vector3(0.1922f, 0.4241f, 0.0f);
+    [SerializeField] private float horizontalFOV = 136.0f;
+    [SerializeField] private float verticalFOV = 123.3772f;
     [SerializeField] private float coneHeightM = 0.45f;
 
     [Header("Debug Options")]
@@ -31,6 +33,19 @@ public class SelfDriving : MonoBehaviour
         imu = GetComponentInChildren<IMU>();
 
         poseEstimator = new PoseEstimator();
+        tracking = new ConeTracking(mapper);
+        projector = new ConeProjector(
+            width, height, cameraOffset, horizontalFOV, verticalFOV, coneHeightM
+        );
+        pathPlanner = new PathPlanner();
+        follower = GetComponent<PathFollower>();
+    }
+
+
+    public Vector3 GetEstimatedPosition()
+    {
+        var pose = poseEstimator.GetPose();
+        return new Vector3(pose.position.x, 0f, pose.position.y);
     }
 
     public float GetHeadingRadians()
@@ -58,13 +73,16 @@ public class SelfDriving : MonoBehaviour
             foreach (DetectedCone cone in cones)
             {
                 Vector3 world = projector.Project(cone.boundingBox, carPos, carHeading);
-                tracking.RegisterCone(world);
+                tracking.RegisterCone(world, cone.color);
             }
 
+            List<Vector3> blues = tracking.GetConesByColor(Color.blue);
+            List<Vector3> yellows = tracking.GetConesByColor(Color.yellow);
+            List<Vector3> path = pathPlanner.UpdatePlan(blues, yellows);
+            follower.FollowPath(path, carPos, carHeading);
+
             if (debugOverridePose)
-            {
                 OverrideEstimatedPoseWithTruePose();
-            }
         }
 
         Vector3 offset = tracking.ComputePoseCorrection(carPos, carHeading);

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1833134203273238234}
   - component: {fileID: 2038901985421702675}
   m_Layer: 0
-  m_Name: TansparentCone
+  m_Name: BlueTansparentCone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 22, y: 22, z: 22}
+  m_LocalScale: {x: 20, y: 20, z: 20}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -64,7 +64,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3b8f1a823ade553149c633acb1fce0a0, type: 2}
+  - {fileID: 2100000, guid: d872c9bd2e3b429c1a88306926165895, type: 2}
   - {fileID: -4778022940908939834, guid: 5c70315404be2094099fdf7c0b9e9e00, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0

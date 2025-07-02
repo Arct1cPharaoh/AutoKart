@@ -20,31 +20,6 @@ public class ContourDetector
         return contours;
     }
 
-    public List<Contour> DetectContoursFromRaw(Texture2D input)
-    {
-        // Crop top of the image to remove sky
-        int width = input.width;
-        int height = input.height;
-        int cropHeight = (int)(height * 0.55);
-
-        Texture2D cropped = new Texture2D(width, cropHeight, TextureFormat.R8, false);
-        Color32[] fullPixels = input.GetPixels32();
-        Color32[] croppedPixels = new Color32[width * cropHeight];
-
-        // Copy bottom (Unity processed bottom to top)
-        for (int y = 0; y < cropHeight; y++)
-        {
-            int srcY = y;
-            Array.Copy(fullPixels, srcY * width, croppedPixels, y * width, width);
-        }
-
-        cropped.SetPixels32(croppedPixels);
-        cropped.Apply();
-
-        // Run edge + contour detection on cropped image
-        return Detect(cropped);
-    }
-
     public static bool Overlaps(RectInt a, RectInt b, int pad = 0)
     {
         return a.xMin - pad < b.xMax && a.xMax + pad > b.xMin &&
