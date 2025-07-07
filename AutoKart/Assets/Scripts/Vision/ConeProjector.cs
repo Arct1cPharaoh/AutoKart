@@ -6,7 +6,7 @@ public class ConeProjector
     private readonly int imageHeight;
     private readonly float horizontalFOV;
     private readonly float verticalFOV;
-    private readonly float coneHeightMeters;
+    private readonly float stereoDiff;
     private readonly Vector3 cameraOffset;
 
     public ConeProjector(
@@ -15,28 +15,39 @@ public class ConeProjector
         Vector3 cameraOffset,
         float horizontalFOV,
         float verticalFOV,
-        float coneHeightMeters)
+        float stereoDiff
+    )
     {
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
         this.cameraOffset = cameraOffset;
         this.horizontalFOV = horizontalFOV;
         this.verticalFOV = verticalFOV;
-        this.coneHeightMeters = coneHeightMeters;
+        this.stereoDiff = stereoDiff;
     }
 
-    private float EstimateConeDistance(float pixelHeight)
+    float EstimateDisparity(StereoDetectedCone cone)
     {
-        float fovRadians = 0.5f * verticalFOV * Mathf.Deg2Rad;
-        float focalLengthPixels = imageHeight / (2f * Mathf.Tan(fovRadians));
-        float distance = (focalLengthPixels * coneHeightMeters) / pixelHeight;
+        float xLeft = cone.leftFrame.boundingBox.center.x;
+        float xRight = cone.rightFrame.boundingBox.center.x;
+        return Mathf.Abs(xLeft - xRight);
+    }
 
-        // Debug.Log($"[DistanceEst] pixelHeight: {pixelHeight:F2}, focalLen(px): {focalLengthPixels:F2}, estDist: {distance:F2}");
+    float EstimateFocalLengthPixels()
+    {
+        float fovRadians = horizontalFOV * Mathf.Deg2Rad;
+        return imageWidth / (2f * Mathf.Tan(fovRadians / 2f));
+    }
 
+    float EstimateDist(float disparity, float focalLengthPixels)
+    {
+        float distance = (stereoDiff * focalLengthPixels) / disparity;
+
+        // Debug.Log($"[Triangulation] disparity: {disparity:F2}, focalLen(px): {focalLengthPixels:F2}, baseline: {stereoDiff:F2}, estDist: {distance:F2}");
         return distance;
     }
 
-    private float EstimateBearing(float xCenter)
+    float EstimateBearing(float xCenter)
     {
         float fovRadians = horizontalFOV * Mathf.Deg2Rad;
         float focalLengthPixels = imageWidth / (2f * Mathf.Tan(fovRadians / 2f));
@@ -48,15 +59,21 @@ public class ConeProjector
         return bearing;
     }
 
-    public Vector3 Project(Rect bbox, Vector3 carPos, float heading)
+    public Vector3? Project(StereoDetectedCone cone, Vector3 carPos, float heading)
     {
-        float pixelHeight = bbox.height;
-        float xCenter = bbox.center.x;
+        float disparity = EstimateDisparity(cone);
 
-        float distance = EstimateConeDistance(pixelHeight);
+        if (disparity < 1e-5f) // FIXME: Use epsilon later
+            return null;
+
+        float focalLengthPixels = EstimateFocalLengthPixels();
+        float distance = EstimateDist(disparity, focalLengthPixels);
+
+        float xLeft = cone.leftFrame.boundingBox.center.x;
+        float xRight = cone.rightFrame.boundingBox.center.x;
+        float xCenter = (xLeft + xRight) * 0.5f;
         float bearing = EstimateBearing(xCenter);
 
-        // Local direction vector
         Vector3 localDirection = new Vector3(Mathf.Sin(bearing), 0f, Mathf.Cos(bearing));
         Quaternion carRotation = Quaternion.Euler(0f, heading * Mathf.Rad2Deg, 0f);
 
@@ -64,7 +81,6 @@ public class ConeProjector
         Vector3 projectedWorldPos = cameraWorldPosition + carRotation * (localDirection * distance);
 
         // Debug.Log($"[Project] camWorldPos: {cameraWorldPosition}, coneWorldPos: {projectedWorldPos}");
-
         // Debug.DrawLine(cameraWorldPosition, projectedWorldPos, Color.magenta, 0.25f, false);
 
         return projectedWorldPos;

@@ -18,7 +18,7 @@ public class SelfDriving : MonoBehaviour
     [SerializeField] private Vector3 cameraOffset = new Vector3(0.1922f, 0.4241f, 0.0f);
     [SerializeField] private float horizontalFOV = 136.0f;
     [SerializeField] private float verticalFOV = 123.3772f;
-    [SerializeField] private float coneHeightM = 0.45f;
+    [SerializeField] private float stereoDiff = 0.2f;
 
     [Header("Debug Options")]
     [SerializeField] private bool debugOverridePose = false;
@@ -35,7 +35,7 @@ public class SelfDriving : MonoBehaviour
         poseEstimator = new PoseEstimator();
         tracking = new ConeTracking(mapper);
         projector = new ConeProjector(
-            width, height, cameraOffset, horizontalFOV, verticalFOV, coneHeightM
+            width, height, cameraOffset, horizontalFOV, verticalFOV, stereoDiff
         );
         pathPlanner = new PathPlanner();
         follower = GetComponent<PathFollower>();
@@ -67,19 +67,21 @@ public class SelfDriving : MonoBehaviour
 
         Vector3 carPos = GetEstimatedPosition();
         float carHeading = GetHeadingRadians();
-        List<DetectedCone> cones = detector.TryDetectFrame(Time.deltaTime);
+        List<StereoDetectedCone> cones = detector.TryDetectFrame(deltaTime);
         if (cones != null)
         {
-            foreach (DetectedCone cone in cones)
+            foreach (StereoDetectedCone cone in cones)
             {
-                Vector3 world = projector.Project(cone.boundingBox, carPos, carHeading);
-                tracking.RegisterCone(world, cone.color);
+                Vector3? world = projector.Project(cone, carPos, carHeading);
+                if (world.HasValue)
+                    tracking.RegisterCone(world.Value, cone.color);
             }
 
             List<Vector3> blues = tracking.GetConesByColor(Color.blue);
             List<Vector3> yellows = tracking.GetConesByColor(Color.yellow);
             List<Vector3> path = pathPlanner.UpdatePlan(blues, yellows);
-            follower.FollowPath(path, carPos, carHeading);
+            if (follower.isActiveAndEnabled)
+                follower.FollowPath(path, carPos, carHeading);
 
             if (debugOverridePose)
                 OverrideEstimatedPoseWithTruePose();

@@ -153,4 +153,63 @@ public static class Image
 
         return cropped;
     }
+
+    public static Texture2D
+    MergeOpacity(Texture2D leftImg, Texture2D rightImg, float alpha = 0.5f)
+    {
+        int width = Mathf.Max(leftImg.width, rightImg.width);
+        int height = Mathf.Max(leftImg.height, rightImg.height);
+
+        Texture2D output = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                Color leftColor = x < leftImg.width && y < leftImg.height
+                    ? leftImg.GetPixel(x, y)
+                    : Color.clear;
+
+                Color rightColor = x < rightImg.width && y < rightImg.height
+                    ? rightImg.GetPixel(x, y)
+                    : Color.clear;
+
+                Color blended = Color.Lerp(leftColor, rightColor, alpha);
+                output.SetPixel(x, y, blended);
+            }
+        }
+
+        output.Apply();
+        return output;
+    }
+
+    public static Texture2D
+    MergeHori(Texture2D leftImg, Texture2D rightImg)
+    {
+        int width = leftImg.width + rightImg.width;
+        int height = Mathf.Max(leftImg.height, rightImg.height);
+
+        Texture2D output = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+        // Draw left image
+        for (int y = 0; y < leftImg.height; y++)
+        {
+            for (int x = 0; x < leftImg.width; x++)
+            {
+                output.SetPixel(x, y, leftImg.GetPixel(x, y));
+            }
+        }
+
+        // Draw right image
+        for (int y = 0; y < rightImg.height; y++)
+        {
+            for (int x = 0; x < rightImg.width; x++)
+            {
+                output.SetPixel(x + leftImg.width, y, rightImg.GetPixel(x, y));
+            }
+        }
+
+        output.Apply();
+        return output;
+    }
 }

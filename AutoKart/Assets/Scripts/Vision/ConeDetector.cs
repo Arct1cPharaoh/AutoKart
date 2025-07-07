@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 public struct DetectedCone
 {
@@ -7,10 +8,18 @@ public struct DetectedCone
     public Color color;
 }
 
+public struct StereoDetectedCone
+{
+    public DetectedCone leftFrame;
+    public DetectedCone rightFrame;
+    public Color color;
+}
+
 public class ConeDetector : MonoBehaviour
 {
     [Header("Capture Settings")]
-    [SerializeField] private CameraSensor cameraSensor;
+    [SerializeField] private CameraSensor cameraSensorLeft;
+    [SerializeField] private CameraSensor cameraSensorRight;
     [SerializeField] private float frameRate = 30f;
     [SerializeField] private string imageSaveFolder = "CapturedFrames";
     [SerializeField] private bool captureOnStart = false;
@@ -26,6 +35,7 @@ public class ConeDetector : MonoBehaviour
 
     private ContourDetector contourDetector;
     private ConeFilter coneFilter;
+    private Vector2 cropOffset;
 
     void Awake()
     {
@@ -37,13 +47,14 @@ public class ConeDetector : MonoBehaviour
     {
         if (captureOnStart)
         {
-            Texture2D initialFrame = cameraSensor.CaptureFrame();
-            DetectCones(initialFrame);
+            Texture2D leftFrame = cameraSensorLeft.CaptureFrame();
+            Texture2D rightFrame = cameraSensorRight.CaptureFrame();
+            DetectConesStereo(leftFrame, rightFrame);
         }
     }
 
-    public int GetCameraWidth() => cameraSensor.GetCameraWidth();
-    public int GetCameraHeight() => cameraSensor.GetCameraHeight();
+    public int GetCameraWidth() => cameraSensorLeft.GetCameraWidth();
+    public int GetCameraHeight() => cameraSensorLeft.GetCameraHeight();
 
 
     // ------------------------------------------------------------------------
@@ -65,13 +76,11 @@ public class ConeDetector : MonoBehaviour
     // End Masking
     // ------------------------------------------------------------------------
 
-    private List<DetectedCone> DetectCones(Texture2D img)
+    List<DetectedCone> DetectCones(Texture2D img)
     {
         Texture2D gray = Image.ToGrayScale(img);
-        // Image.ApplyPolygonMask(gray, carMask);
 
         // Crop out top (sky) and bottom (car)
-        Vector2 cropOffset;
         Texture2D cropped = Image.Crop(
             gray,
             out cropOffset,
@@ -86,28 +95,126 @@ public class ConeDetector : MonoBehaviour
             rawContours, img, cropOffset
         );
 
-        if (!saveFrames)
-        {
-            return detected;
-        }
-
-        // Draw cone bboxes
-        foreach (var cone in detected)
-        {
-            Rect box = cone.boundingBox;
-            Color col = cone.color;
-            box.position += cropOffset;
-            Draw.Box(img, box, col);
-        }
-
-        // Image.ApplyPolygonMask(img, carMask);
-        Image.SaveAsync(img, imageSaveFolder, frameCounter);
-        frameCounter++;
 
         return detected;
     }
 
-    public List<DetectedCone> TryDetectFrame(float deltaTime)
+    int FindBestRightMatch(
+        DetectedCone left,
+        List<DetectedCone> rightCones,
+        HashSet<int> unmatchedRight,
+        int imageWidth,
+        float maxXDistNorm
+    )
+    {
+        float xLeftNorm = left.boundingBox.center.x / imageWidth;
+        float bestDist = float.MaxValue;
+        int bestIndex = -1;
+
+        foreach (int i in unmatchedRight)
+        {
+            float xRightNorm = rightCones[i].boundingBox.center.x / imageWidth;
+            float dist = Mathf.Abs(xLeftNorm - xRightNorm);
+
+            if (dist <= maxXDistNorm && dist < bestDist)
+            {
+                bestDist = dist;
+                bestIndex = i;
+            }
+        }
+
+        return bestIndex;
+    }
+
+    bool ColorsMatch(DetectedCone a, DetectedCone b)
+    {
+        return a.color == b.color;
+    }
+
+    StereoDetectedCone CreateStereoCone(DetectedCone left, DetectedCone right)
+    {
+        return new StereoDetectedCone
+        {
+            leftFrame = left,
+            rightFrame = right,
+            color = left.color // safe to use either since they're equal
+        };
+    }
+
+    List<StereoDetectedCone> MatchStereoCones(
+        List<DetectedCone> leftCones,
+        List<DetectedCone> rightCones,
+        int imageWidth,
+        float maxXDistNorm = 0.05f
+    )
+    {
+        List<StereoDetectedCone> matched = new List<StereoDetectedCone>();
+        HashSet<int> unmatchedRight = new HashSet<int>(
+            Enumerable.Range(0, rightCones.Count)
+        );
+
+        foreach (DetectedCone left in leftCones)
+        {
+            int bestIndex = FindBestRightMatch(
+                left, rightCones, unmatchedRight, imageWidth, maxXDistNorm
+            );
+
+            if (bestIndex != -1 && ColorsMatch(left, rightCones[bestIndex]))
+            {
+                StereoDetectedCone stereoCone = CreateStereoCone(
+                    left, rightCones[bestIndex]
+                );
+                matched.Add(stereoCone);
+                unmatchedRight.Remove(bestIndex);
+            }
+        }
+
+        return matched;
+    }
+
+    void AnotateImages(Texture2D leftImg, Texture2D rightImg,
+        List<DetectedCone> leftCones, List<DetectedCone> rightCones)
+    {
+        // Annotate boxes on left and right image
+        foreach (var cone in leftCones)
+        {
+            Rect box = cone.boundingBox;
+            Color col = cone.color;
+            box.position += cropOffset;
+            Draw.Box(leftImg, box, col);
+        }
+
+        // Annotate right image
+        foreach (var cone in rightCones)
+        {
+            Rect box = cone.boundingBox;
+            Color col = cone.color;
+            box.position += cropOffset;
+            Draw.Box(rightImg, box, col);
+        }
+
+        // Texture2D merged = Image.MergeOpacity(
+        //     leftImg, rightImg, alpha: 0.5f
+        // );
+        Texture2D merged = Image.MergeHori(leftImg, rightImg);
+        Image.SaveAsync(merged, imageSaveFolder, frameCounter);
+        frameCounter++;
+    }
+
+    private List<StereoDetectedCone> DetectConesStereo(Texture2D leftImg, Texture2D rightImg)
+    {
+        var leftCones = DetectCones(leftImg);
+        var rightCones = DetectCones(rightImg);
+
+        var stereoCones = MatchStereoCones(leftCones, rightCones, leftImg.width);
+
+        if (saveFrames)
+            AnotateImages(leftImg, rightImg, leftCones, rightCones);
+
+        return stereoCones;
+    }
+
+    public List<StereoDetectedCone> TryDetectFrame(float deltaTime)
     {
         frameTimer += deltaTime;
 
@@ -116,7 +223,9 @@ public class ConeDetector : MonoBehaviour
 
         frameTimer = 0f;
 
-        Texture2D frame = cameraSensor.CaptureFrame();
-        return DetectCones(frame);
+        Texture2D leftFrame = cameraSensorLeft.CaptureFrame();
+        Texture2D rightFrame = cameraSensorRight.CaptureFrame();
+
+        return DetectConesStereo(leftFrame, rightFrame);
     }
 }
