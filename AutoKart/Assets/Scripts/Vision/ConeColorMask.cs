@@ -7,7 +7,7 @@ public static class ConeColorMask
     // Yellow Cones (Hue ~30°)
     static bool IsYellowHSV(float h, float s, float v)
     {
-        return h > 0.10f && h < 0.18f && s > 0.4f && v > 0.4f;
+        return h > 0.15f && h < 0.18f && s > 0.4f && v > 0.4f;
     }
 
     // Blue Cones (Hue ~220-240°)

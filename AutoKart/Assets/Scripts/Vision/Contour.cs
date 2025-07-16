@@ -23,4 +23,22 @@ public class Contour
 
         return new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
+
+    public static void
+    DrawContours(Texture2D tex, List<Contour> contours, Color color)
+    {
+        foreach (var contour in contours)
+        {
+            if (contour.points.Count < 2) continue;
+
+            for (int i = 0; i < contour.points.Count; i++)
+            {
+                Vector2 a = contour.points[i];
+                Vector2 b = contour.points[(i + 1) % contour.points.Count];
+                Draw.Line(tex, a, b, color);
+            }
+        }
+
+        tex.Apply();
+    }
 }

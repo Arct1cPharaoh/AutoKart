@@ -42,13 +42,13 @@ public class PathPlanner
             waypoints.Add(midpoint);
 
             // Debugging
-            // Debug.DrawLine(blueCones[i], midpoint, Color.blue, 0.1f);
-            // Debug.DrawLine(yellowCones[i], midpoint, Color.yellow, 0.1f);
+            Debug.DrawLine(blueCones[i], midpoint, Color.blue, 0.1f);
+            Debug.DrawLine(yellowCones[i], midpoint, Color.yellow, 0.1f);
 
-            // if (i > 0)
-            // {
-            //     Debug.DrawLine(waypoints[i - 1], waypoints[i], Color.green, 0.1f);
-            // }
+            if (i > 0)
+            {
+                Debug.DrawLine(waypoints[i - 1], waypoints[i], Color.green, 0.1f);
+            }
         }
 
         smoothedPath = SmoothPath(waypoints, 2);

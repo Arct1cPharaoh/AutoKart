@@ -4002,7 +4002,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 459071503}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b3701115bf5e2751bdf3681b568a315, type: 3}
   m_Name: 
@@ -22438,8 +22438,8 @@ MonoBehaviour:
   cameraSensorRight: {fileID: 2056096292}
   frameRate: 10
   imageSaveFolder: CapturedFrames
-  captureOnStart: 0
-  saveFrames: 0
+  captureOnStart: 1
+  saveFrames: 1
   contourMergePad: 10
   minPoints: 5
   minSize: 5

@@ -14,6 +14,7 @@ public class ConeFilter
         this.mergePadding = mergePadding;
     }
 
+    // Not used
     private List<Contour> RemoveNestedContours(List<Contour> contours)
     {
         int count = contours.Count;
@@ -100,23 +101,23 @@ public class ConeFilter
         Texture2D img, Vector2 cropOffset)
     {
         List<Contour> merged = MergeContours(rawContours, mergePadding);
-        List<Contour> filtered = RemoveNestedContours(merged);
+        // List<Contour> filtered = RemoveNestedContours(merged);
 
         List<DetectedCone> cones = new List<DetectedCone>();
 
-        foreach (Contour contour in filtered)
+        foreach (Contour contour in merged)
         {
-            if (contour.points.Count < minPoints)
-                continue;
-
+            // if (contour.points.Count < minPoints)
+            //     continue;
+            //
             RectInt box = contour.GetBoundingBox();
-            if (box.width < minSize || box.height < minSize)
-                continue;
-
-            float aspect = 0.9f;
-            float tolerance = 0.3f;
-            if (!IsConeAspectRatio(box, aspect, tolerance))
-                continue;
+            // if (box.width < minSize || box.height < minSize)
+            //     continue;
+            //
+            // float aspect = 0.9f;
+            // float tolerance = 0.3f;
+            // if (!IsConeAspectRatio(box, aspect, tolerance))
+            //     continue;
 
             Color? detectedColor = ConeColorMask.SampleConeColor(img, box, cropOffset);
             if (detectedColor == null)

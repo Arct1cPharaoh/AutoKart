@@ -90,11 +90,28 @@ public class ConeDetector : MonoBehaviour
 
         Image.SaveAsync(cropped, "CapturedFrames", -1);
 
+        Texture2D debugContour = new Texture2D(cropped.width, cropped.height);
+        // --- Just adding img back in
+        Color[] grayPixels = cropped.GetPixels();
+        Color[] rgbPixels = new Color[grayPixels.Length];
+        for (int i = 0; i < grayPixels.Length; i++)
+        {
+            float g = grayPixels[i].r;  // grayscale stored in red channel
+            rgbPixels[i] = new Color(g, g, g);  // replicate across RGB
+        }
+        debugContour.SetPixels(rgbPixels);
+        debugContour.Apply();
+        // --- Just adding img back in
+
         List<Contour> rawContours = contourDetector.Detect(cropped);
+
+        // Draw contours in red
+        Contour.DrawContours(debugContour, rawContours, Color.red);
+        Image.SaveAsync(debugContour, "CapturedFrames", -2);
+
         List<DetectedCone> detected = coneFilter.FilterContours(
             rawContours, img, cropOffset
         );
-
 
         return detected;
     }

@@ -15,8 +15,8 @@ public class ConeTracking
     private readonly ConeMapper coneMapper;
 
     private const float POS_THRESHOLD = 2.0f;
-    private const int MIN_UPDATES_TO_CONFIRM = 5;
-    private const float MAX_RANGE = 5f;
+    private const int MIN_UPDATES_TO_CONFIRM = 2;
+    private const float MAX_RANGE = 10f;
 
     public ConeTracking(ConeMapper mapper)
     {

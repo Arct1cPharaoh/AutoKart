@@ -279,9 +279,9 @@ MonoBehaviour:
   imageSaveFolder: CapturedFrames
   captureOnStart: 1
   saveFrames: 1
-  contourMergePad: 10
-  minPoints: 5
-  minSize: 5
+  contourMergePad: 4
+  minPoints: 3
+  minSize: 7
 --- !u!1 &67623288
 GameObject:
   m_ObjectHideFlags: 0
@@ -9519,7 +9519,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8726961593768786881}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a9ea71e7e783f364e97ac7e0c5f3f107, type: 3}
   m_Name: 
@@ -9854,11 +9854,11 @@ GameObject:
   - component: {fileID: 8239254127027216763}
   - component: {fileID: 5462757806461470943}
   - component: {fileID: 5643144144031159595}
-  - component: {fileID: 7953424685079480182}
   - component: {fileID: 8600596855430314582}
   - component: {fileID: 8726961593768786882}
   - component: {fileID: 2972744192596759771}
   - component: {fileID: 7051507733816043348}
+  - component: {fileID: 7953424685079480182}
   m_Layer: 0
   m_Name: GoKart
   m_TagString: Untagged
@@ -9873,7 +9873,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8726961593768786881}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6073fd1592926a3b9bdf37ebd4c35a6d, type: 3}
   m_Name: 
