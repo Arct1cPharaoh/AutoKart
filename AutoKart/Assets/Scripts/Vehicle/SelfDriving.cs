@@ -4,8 +4,8 @@ using System.Collections.Generic;
 public class SelfDriving : MonoBehaviour
 {
     PoseEstimator poseEstimator;
-    ConeDetector detector;
-    ConeProjector projector;
+    // ConeDetector detector;
+    // ConeProjector projector;
     ConeTracking tracking;
     PathPlanner pathPlanner;
     PathFollower follower;
@@ -25,20 +25,20 @@ public class SelfDriving : MonoBehaviour
 
     void Start()
     {
-        detector = GetComponentInChildren<ConeDetector>();
-        int width = detector.GetCameraWidth();
-        int height = detector.GetCameraHeight();
-
-        wheel = GetComponentInChildren<Speedometer>();
-        imu = GetComponentInChildren<IMU>();
-
-        poseEstimator = new PoseEstimator();
-        tracking = new ConeTracking(mapper);
-        projector = new ConeProjector(
-            width, height, cameraOffset, horizontalFOV, verticalFOV, stereoDiff
-        );
-        pathPlanner = new PathPlanner();
-        follower = GetComponent<PathFollower>();
+        // detector = GetComponentInChildren<ConeDetector>();
+        // int width = detector.GetCameraWidth();
+        // int height = detector.GetCameraHeight();
+        //
+        // wheel = GetComponentInChildren<Speedometer>();
+        // imu = GetComponentInChildren<IMU>();
+        //
+        // poseEstimator = new PoseEstimator();
+        // tracking = new ConeTracking(mapper);
+        // projector = new ConeProjector(
+        //     width, height, cameraOffset, horizontalFOV, verticalFOV, stereoDiff
+        // );
+        // pathPlanner = new PathPlanner();
+        // follower = GetComponent<PathFollower>();
     }
 
 
@@ -62,33 +62,33 @@ public class SelfDriving : MonoBehaviour
 
     void Update()
     {
-        float deltaTime = Time.deltaTime;
-        float speed = wheel.GetSpeedMPH();
-
-        Vector3 carPos = GetEstimatedPosition();
-        float carHeading = GetHeadingRadians();
-        List<StereoDetectedCone> cones = detector.TryDetectFrame(deltaTime);
-        if (cones != null)
-        {
-            foreach (StereoDetectedCone cone in cones)
-            {
-                Vector3? world = projector.Project(cone, carPos, carHeading);
-                if (world.HasValue)
-                    tracking.RegisterCone(world.Value, cone.color);
-            }
-
-            List<Vector3> blues = tracking.GetConesByColor(Color.blue);
-            List<Vector3> yellows = tracking.GetConesByColor(Color.yellow);
-            List<Vector3> path = pathPlanner.UpdatePlan(blues, yellows);
-            if (follower.isActiveAndEnabled)
-                follower.FollowPath(path, carPos, carHeading);
-
-            if (debugOverridePose)
-                OverrideEstimatedPoseWithTruePose();
-        }
-
-        Vector3 offset = tracking.ComputePoseCorrection(carPos, carHeading);
-        // float headingCorrection = tracking.ComputeHeadingCorrection(carPos, carHeading);
-        poseEstimator.Update(deltaTime, speed, imu, offset, 0.0f);
+        // float deltaTime = Time.deltaTime;
+        // float speed = wheel.GetSpeedMPH();
+        //
+        // Vector3 carPos = GetEstimatedPosition();
+        // float carHeading = GetHeadingRadians();
+        // List<StereoDetectedCone> cones = detector.TryDetectFrame(deltaTime);
+        // if (cones != null)
+        // {
+        //     foreach (StereoDetectedCone cone in cones)
+        //     {
+        //         Vector3? world = projector.Project(cone, carPos, carHeading);
+        //         if (world.HasValue)
+        //             tracking.RegisterCone(world.Value, cone.color);
+        //     }
+        //
+        //     List<Vector3> blues = tracking.GetConesByColor(Color.blue);
+        //     List<Vector3> yellows = tracking.GetConesByColor(Color.yellow);
+        //     List<Vector3> path = pathPlanner.UpdatePlan(blues, yellows);
+        //     if (follower.isActiveAndEnabled)
+        //         follower.FollowPath(path, carPos, carHeading);
+        //
+        //     if (debugOverridePose)
+        //         OverrideEstimatedPoseWithTruePose();
+        // }
+        //
+        // Vector3 offset = tracking.ComputePoseCorrection(carPos, carHeading);
+        // // float headingCorrection = tracking.ComputeHeadingCorrection(carPos, carHeading);
+        // poseEstimator.Update(deltaTime, speed, imu, offset, 0.0f);
     }
 }

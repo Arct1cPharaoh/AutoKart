@@ -73,3 +73,46 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Images
+AutoKart/Assets/CapturedFrames/
+
+# === ML (AutoKart/Assets/Scripts/ML) ===
+AutoKart/Assets/Scripts/ML/__pycache__/
+AutoKart/Assets/Scripts/ML/*.pyc
+AutoKart/Assets/Scripts/ML/.ipynb_checkpoints/
+AutoKart/Assets/Scripts/ML/*.onnx
+AutoKart/Assets/Scripts/ML/*.pt
+AutoKart/Assets/Scripts/ML/*.pth
+AutoKart/Assets/Scripts/ML/*.tflite
+AutoKart/Assets/Scripts/ML/*.engine
+AutoKart/Assets/Scripts/ML/*.log
+AutoKart/Assets/Scripts/ML/*.csv
+AutoKart/Assets/Scripts/ML/*.yaml
+AutoKart/Assets/Scripts/ML/*.yml
+
+# Exclude predictions, datasets, and training outputs
+AutoKart/Assets/Scripts/ML/dataset_yolo*/
+AutoKart/Assets/Scripts/ML/data/
+AutoKart/Assets/Scripts/ML/fsoco-devkit/
+AutoKart/Assets/Scripts/ML/runs/
+AutoKart/Assets/Scripts/ML/models/
+
+# Ban images and predictions
+AutoKart/Assets/Scripts/ML/**/*.jpg
+AutoKart/Assets/Scripts/ML/**/*.jpeg
+AutoKart/Assets/Scripts/ML/**/*.png
+AutoKart/Assets/Scripts/ML/**/*.bmp
+AutoKart/Assets/Scripts/ML/**/*.gif
+AutoKart/Assets/Scripts/ML/**/*.webp
+AutoKart/Assets/Scripts/ML/**/*.tif
+AutoKart/Assets/Scripts/ML/**/*.tiff
+
+# Checkpoints or cached files
+AutoKart/Assets/Scripts/ML/*.cache
+AutoKart/Assets/Scripts/ML/*.ckpt
+AutoKart/Assets/Scripts/ML/*.npy
+AutoKart/Assets/Scripts/ML/*.npz
+
+# TensorBoard logs
+AutoKart/Assets/Scripts/ML/events.out.*
