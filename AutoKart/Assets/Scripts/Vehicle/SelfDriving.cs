@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class SelfDriving : MonoBehaviour
 {
     PoseEstimator poseEstimator;
-    // ConeDetector detector;
+    ConeDetector detector;
     // ConeProjector projector;
     ConeTracking tracking;
     PathPlanner pathPlanner;
@@ -25,13 +25,13 @@ public class SelfDriving : MonoBehaviour
 
     void Start()
     {
-        // detector = GetComponentInChildren<ConeDetector>();
-        // int width = detector.GetCameraWidth();
-        // int height = detector.GetCameraHeight();
-        //
-        // wheel = GetComponentInChildren<Speedometer>();
-        // imu = GetComponentInChildren<IMU>();
-        //
+        detector = GetComponentInChildren<ConeDetector>();
+        int width = detector.GetCameraWidth();
+        int height = detector.GetCameraHeight();
+
+        wheel = GetComponentInChildren<Speedometer>();
+        imu = GetComponentInChildren<IMU>();
+
         // poseEstimator = new PoseEstimator();
         // tracking = new ConeTracking(mapper);
         // projector = new ConeProjector(
@@ -40,7 +40,6 @@ public class SelfDriving : MonoBehaviour
         // pathPlanner = new PathPlanner();
         // follower = GetComponent<PathFollower>();
     }
-
 
     public Vector3 GetEstimatedPosition()
     {
@@ -53,24 +52,24 @@ public class SelfDriving : MonoBehaviour
         return poseEstimator.GetPose().heading;
     }
 
-    public void OverrideEstimatedPoseWithTruePose()
-    {
-        Vector3 truePos = transform.position;
-        float trueHeading = transform.eulerAngles.y * Mathf.Deg2Rad;
-        poseEstimator.OverridePose(new Vector2(truePos.x, truePos.z), trueHeading);
-    }
+    // public void OverrideEstimatedPoseWithTruePose()
+    // {
+    //     Vector3 truePos = transform.position;
+    //     float trueHeading = transform.eulerAngles.y * Mathf.Deg2Rad;
+    //     poseEstimator.OverridePose(new Vector2(truePos.x, truePos.z), trueHeading);
+    // }
 
     void Update()
     {
-        // float deltaTime = Time.deltaTime;
-        // float speed = wheel.GetSpeedMPH();
-        //
+        float deltaTime = Time.deltaTime;
+        float speed = wheel.GetSpeedMPH();
+
         // Vector3 carPos = GetEstimatedPosition();
         // float carHeading = GetHeadingRadians();
-        // List<StereoDetectedCone> cones = detector.TryDetectFrame(deltaTime);
+        List<DetectedCone> cones = detector.TryDetectFrame(deltaTime);
         // if (cones != null)
         // {
-        //     foreach (StereoDetectedCone cone in cones)
+        //     foreach (DetectedCone cone in cones)
         //     {
         //         Vector3? world = projector.Project(cone, carPos, carHeading);
         //         if (world.HasValue)
@@ -86,7 +85,7 @@ public class SelfDriving : MonoBehaviour
         //     if (debugOverridePose)
         //         OverrideEstimatedPoseWithTruePose();
         // }
-        //
+
         // Vector3 offset = tracking.ComputePoseCorrection(carPos, carHeading);
         // // float headingCorrection = tracking.ComputeHeadingCorrection(carPos, carHeading);
         // poseEstimator.Update(deltaTime, speed, imu, offset, 0.0f);

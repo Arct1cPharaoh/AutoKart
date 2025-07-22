@@ -7921,7 +7921,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   width: 640
-  height: 480
+  height: 640
 --- !u!4 &4832917600025973900
 Transform:
   m_ObjectHideFlags: 0
@@ -9403,7 +9403,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8726961593768786881}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b3701115bf5e2751bdf3681b568a315, type: 3}
   m_Name: 
@@ -9517,31 +9517,18 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8666239286621796952}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f552c9bbaceaa2e499d8b8ab00dda71b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cameraSensorLeft: {fileID: 0}
-  cameraSensorRight: {fileID: 0}
+  cameraSensor: {fileID: 4802271699236062478}
   frameRate: 10
   imageSaveFolder: CapturedFrames
   captureOnStart: 1
   saveFrames: 1
-  contourMergePad: 4
-  minPoints: 3
-  minSize: 7
-  frameTimer: 0
-  frameCounter: 0
-  cropOffset: {x: 0, y: 0}
-  carMask:
-  - {x: 0.2, y: 0.25}
-  - {x: 0.26, y: 0.34}
-  - {x: 0.37, y: 0.37}
-  - {x: 0.5, y: 0.43}
-  - {x: 0.63, y: 0.37}
-  - {x: 0.74, y: 0.34}
-  - {x: 0.8, y: 0.25}
+  confidenceThreshold: 0.25
+  onnxModel: {fileID: 5022602860645237092, guid: af909e51b7f291e8e8397470804c085a, type: 3}
 --- !u!4 &8666847614424424682
 Transform:
   m_ObjectHideFlags: 0

@@ -212,4 +212,20 @@ public static class Image
         output.Apply();
         return output;
     }
+
+    public static Texture2D Resize(Texture2D source, int width, int height)
+    {
+        RenderTexture rt = RenderTexture.GetTemporary(width, height);
+        RenderTexture.active = rt;
+        Graphics.Blit(source, rt);
+
+        Texture2D resized = new Texture2D(width, height, TextureFormat.RGB24, false);
+        resized.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        resized.Apply();
+
+        RenderTexture.active = null;
+        RenderTexture.ReleaseTemporary(rt);
+
+        return resized;
+    }
 }
