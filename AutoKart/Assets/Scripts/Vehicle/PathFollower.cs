@@ -56,7 +56,7 @@ public class PathFollower : MonoBehaviour
 
         // Apply control
         car.steeringAngle = Mathf.Clamp(steeringDeg, -specs.maxSteeringAngle, specs.maxSteeringAngle);
-        car.throttlePos = 1.0f;
+        car.throttlePos = 0.5f;
         car.brakePos = 0.0f;
 
         Debug.DrawLine(carPos, target, Color.green, 0.1f);

@@ -3988,6 +3988,7 @@ GameObject:
   - component: {fileID: 459071507}
   - component: {fileID: 459071506}
   - component: {fileID: 459071505}
+  - component: {fileID: 459071512}
   m_Layer: 0
   m_Name: GoKart
   m_TagString: Untagged
@@ -4124,7 +4125,7 @@ MonoBehaviour:
   frontTrackWidth: 1.2
   rearTrackWidth: 1.2
   tireRadius: 0.0959
-  motorMaxTorque: 5
+  motorMaxTorque: 40
   motorMaxRPM: 8000
   frontalArea: 1
   dragCoefficient: 0.8
@@ -4169,6 +4170,21 @@ Transform:
   - {fileID: 854383804}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &459071512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 459071503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a23c6fa8009fc04f87cfb2b491a6283, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  timeText: {fileID: 1035706519}
+  lastTimeText: {fileID: 414833790}
+  bestTimeText: {fileID: 1952847317}
 --- !u!1001 &479953852
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -22440,9 +22456,7 @@ MonoBehaviour:
   imageSaveFolder: CapturedFrames
   captureOnStart: 1
   saveFrames: 1
-  contourMergePad: 10
-  minPoints: 5
-  minSize: 5
+  onnxModel: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
